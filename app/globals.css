@@ -251,7 +251,7 @@ h2 {
   max-width: none;
   right: var(--page-padding);
   top: 131px;
-  width: calc(var(--calendar-day-width) - 8px);
+  width: var(--calendar-day-width);
 }
 
 .start-popup {
@@ -358,6 +358,16 @@ h2 {
   gap: 12px;
   margin-bottom: 30px;
   padding: 16px;
+}
+
+.edit-print-panel {
+  left: var(--page-padding);
+  max-height: calc(100vh - (var(--page-padding) * 2));
+  overflow: auto;
+  position: fixed;
+  right: var(--page-padding);
+  top: var(--page-padding);
+  z-index: 30;
 }
 
 .panel-heading,
@@ -569,6 +579,10 @@ h2 {
   align-items: center;
   display: flex;
   justify-content: flex-start;
+}
+
+.material-add .secondary-action {
+  width: 160px;
 }
 
 .material-add-form {
@@ -849,10 +863,6 @@ h2 {
 .print-card.is-movable {
   cursor: grab;
   touch-action: none;
-}
-
-.print-card.is-urgent {
-  border-color: rgba(31, 31, 29, 0.72);
 }
 
 .print-card.is-past {
@@ -1187,6 +1197,16 @@ h2 {
 
 .mobile-next-week-button {
   display: none;
+}
+
+.mobile-next-week-icon {
+  background-image: url("/icons/pfeil-rechts.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  display: inline-block;
+  height: 12px;
+  width: 20px;
 }
 
 .event-timeline {
@@ -1728,7 +1748,10 @@ h2 {
   }
 
   .edit-print-panel {
-    position: relative;
+    left: 14px;
+    max-height: calc(100vh - 28px);
+    right: 14px;
+    top: 14px;
   }
 
   .edit-print-panel .panel-heading {
@@ -1791,6 +1814,7 @@ h2 {
     color: var(--ink);
     cursor: pointer;
     display: inline-flex;
+    gap: 8px;
     font: inherit;
     font-size: 16px;
     justify-content: center;
@@ -1821,6 +1845,7 @@ h2 {
   }
 
   .mobile-event-item {
+    align-items: center;
     background: var(--event-color);
     border: 1px solid rgba(31, 31, 29, 0.16);
     border-radius: 999px;
@@ -1858,6 +1883,10 @@ h2 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .mobile-event-item.type-deadline span {
+    line-height: 1;
   }
 
   .mobile-event-item .timeline-edit-button {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "jelly studio planner",
+  title: "jelly planner",
   description: "Internal production planning prototype for jelly objects"
 };
 

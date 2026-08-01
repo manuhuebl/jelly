@@ -935,6 +935,10 @@ function buildRunTitle(entry: ScheduledRun) {
 }
 
 function getSegmentLabel(segment: CalendarSegment, now: Date) {
+  if (segment.startsBeforeSegment && segment.run.status !== "failed") {
+    return "continued";
+  }
+
   if (segment.run.status === "finished") {
     return "done";
   }
@@ -950,11 +954,30 @@ function getSegmentLabel(segment: CalendarSegment, now: Date) {
     return "done";
   }
 
-  if (segment.startsBeforeSegment) {
-    return "continued";
+  return statusLabels[segment.run.status];
+}
+
+function getDeadlineWarning(run: PrintRun, product: Product, now: Date) {
+  if (!run.customerDeadline) {
+    return null;
   }
 
-  return statusLabels[segment.run.status];
+  const deadline = asDate(run.customerDeadline);
+  const printEnd = getEndDate(run, product);
+
+  if (
+    deadline < now &&
+    run.status !== "finished" &&
+    run.status !== "failed"
+  ) {
+    return "Deadline has passed. Adjust the deadline.";
+  }
+
+  if (printEnd > deadline) {
+    return "Print ends after deadline. Adjust the deadline.";
+  }
+
+  return null;
 }
 
 function shouldShowStatusPill(label: string) {
@@ -1234,6 +1257,11 @@ export function WeekPlanner() {
   const candidateRun = buildCandidateRun(newPrint);
   const candidateStart = asDate(candidateRun.startDateTime);
   const candidateEnd = getEndDate(candidateRun, selectedNewProduct);
+  const candidateDeadlineWarning = getDeadlineWarning(
+    candidateRun,
+    selectedNewProduct,
+    now
+  );
   const conflict = findPrintConflict(candidateRun, runs, productById);
   const hasWeekendStart = isWeekend(candidateStart);
   const hasPastStart = candidateStart < now;
@@ -1245,6 +1273,8 @@ export function WeekPlanner() {
   const editProduct = editPrint ? productById.get(editPrint.productId) ?? productData[0] : null;
   const editStart = editCandidate ? asDate(editCandidate.startDateTime) : null;
   const editEnd = editCandidate && editProduct ? getEndDate(editCandidate, editProduct) : null;
+  const editDeadlineWarning =
+    editCandidate && editProduct ? getDeadlineWarning(editCandidate, editProduct, now) : null;
   const editConflict = editCandidate
     ? findPrintConflict(editCandidate, runs, productById)
     : null;
@@ -1511,17 +1541,18 @@ export function WeekPlanner() {
 
   function updateProductData(
     productId: Product["id"],
-    field: "pelletUsageKg" | "printDurationHours",
+    field: "name" | "pelletUsageKg" | "printDurationHours",
     value: string
   ) {
-    const nextValue = Math.max(Number(value) || 0, 0);
-
     setProductData((current) =>
       current.map((product) =>
         product.id === productId
           ? {
               ...product,
-              [field]: nextValue
+              [field]:
+                field === "name"
+                  ? value.toLowerCase()
+                  : Math.max(Number(value) || 0, 0)
             }
           : product
       )
@@ -1633,6 +1664,15 @@ export function WeekPlanner() {
     }
 
     setRuns((current) => [...current, run]);
+    const deadlineWarning = getDeadlineWarning(run, selectedNewProduct, now);
+
+    if (deadlineWarning) {
+      setNotice({
+        title: "Deadline warning",
+        body: deadlineWarning
+      });
+    }
+
     setIsAddOpen(false);
     setNewPrint((current) => ({
       ...current,
@@ -1724,6 +1764,18 @@ export function WeekPlanner() {
     setRuns((current) =>
       current.map((run) => (run.id === runId ? updatedRun : run))
     );
+    const updatedProduct = productById.get(updatedRun.productId);
+    const deadlineWarning = updatedProduct
+      ? getDeadlineWarning(updatedRun, updatedProduct, now)
+      : null;
+
+    if (deadlineWarning) {
+      setNotice({
+        title: "Deadline warning",
+        body: deadlineWarning
+      });
+    }
+
     setSelectedRunId(null);
     setEditPrint(null);
   }
@@ -2069,11 +2121,18 @@ export function WeekPlanner() {
       setEditPrint(buildEditForm(movedRun));
     }
 
+    const movedProduct = productById.get(run.productId);
+    const deadlineWarning = movedProduct
+      ? getDeadlineWarning(movedRun, movedProduct, now)
+      : null;
+
     setNotice({
-      title: "Print moved",
-      body: `${productById.get(run.productId)?.name ?? "print"} starts ${formatCompactDate(
-        start
-      )} ${formatTime(start)}.`
+      title: deadlineWarning ? "Deadline warning" : "Print moved",
+      body:
+        deadlineWarning ??
+        `${movedProduct?.name ?? "print"} starts ${formatCompactDate(start)} ${formatTime(
+          start
+        )}.`
     });
   }
 
@@ -2611,6 +2670,9 @@ export function WeekPlanner() {
             <p className="form-alert">Reprint ready. Adjust date, time, or printer.</p>
           ) : null}
           {hasPastStart ? <p className="form-alert">start cannot be in the past</p> : null}
+          {candidateDeadlineWarning ? (
+            <p className="form-alert">{candidateDeadlineWarning}</p>
+          ) : null}
           {conflict ? (
             <p className="form-alert">
               conflict with {conflict.product.name} / {conflict.run.project},{" "}
@@ -2729,6 +2791,9 @@ export function WeekPlanner() {
             </button>
           </form>
 
+          {editDeadlineWarning ? (
+            <p className="form-alert">{editDeadlineWarning}</p>
+          ) : null}
           {editConflict ? (
             <p className="form-alert">
               Conflict with {editConflict.product.name} / {editConflict.run.project},{" "}
@@ -2913,7 +2978,8 @@ export function WeekPlanner() {
               }
               type="button"
             >
-              -&gt; next week
+              <span className="mobile-next-week-icon" aria-hidden="true" />
+              <span>next week</span>
             </button>
           ) : null}
         </section>
@@ -3652,6 +3718,15 @@ export function WeekPlanner() {
                 </strong>
                 {editingProductDataId === product.id ? (
                   <div className="product-data-edit">
+                    <label>
+                      <span>product</span>
+                      <input
+                        value={product.name}
+                        onChange={(event) =>
+                          updateProductData(product.id, "name", event.target.value)
+                        }
+                      />
+                    </label>
                     <label>
                       <span>printing time</span>
                       <input

@@ -1086,7 +1086,9 @@ export function WeekPlanner() {
   const [now, setNow] = useState(() => new Date());
   const [isPlannerLoaded, setIsPlannerLoaded] = useState(false);
   const nativeDragRef = useRef<NativeDragPayload | null>(null);
+  const remoteUpdatedAtRef = useRef<string | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
+  const skipNextSaveRef = useRef(true);
   const suppressClickRunId = useRef<string | null>(null);
   const weekStart = getWeekStart(weekOffset);
   const weekDays = getWeekDays(weekStart);
@@ -1147,40 +1149,36 @@ export function WeekPlanner() {
 
   useEffect(() => {
     let isCancelled = false;
-    const fallbackTimeout = window.setTimeout(() => {
-      if (!isCancelled) {
-        setIsPlannerLoaded(true);
-      }
-    }, 3000);
 
     async function loadStoredPlannerState() {
       try {
-        const storedState = await loadPlannerState();
+        const loadedState = await loadPlannerState();
 
         if (isCancelled) {
           return;
         }
 
-        if (storedState) {
-          setRuns(storedState.runs);
+        remoteUpdatedAtRef.current = loadedState.updatedAt;
+
+        if (loadedState.state) {
+          setRuns(loadedState.state.runs);
           setTimelineEvents(
-            storedState.timelineEvents.map((event) => ({
+            loadedState.state.timelineEvents.map((event) => ({
               ...event,
               type: event.type as TimelineKind
             }))
           );
-          setProductData(storedState.productData);
-          setMaterialStockKg(storedState.materialStockKg);
-          setManualProductInventory(storedState.manualProductInventory);
+          setProductData(loadedState.state.productData);
+          setMaterialStockKg(loadedState.state.materialStockKg);
+          setManualProductInventory(loadedState.state.manualProductInventory);
         }
       } catch {
         setNotice({
-          title: "Supabase offline",
-          body: "Using local starter data for now."
+          title: "Load failed",
+          body: "Refresh once, or check Supabase if this keeps happening."
         });
       } finally {
         if (!isCancelled) {
-          window.clearTimeout(fallbackTimeout);
           setIsPlannerLoaded(true);
         }
       }
@@ -1190,12 +1188,16 @@ export function WeekPlanner() {
 
     return () => {
       isCancelled = true;
-      window.clearTimeout(fallbackTimeout);
     };
   }, []);
 
   useEffect(() => {
     if (!isPlannerLoaded) {
+      return;
+    }
+
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
       return;
     }
 
@@ -1212,7 +1214,11 @@ export function WeekPlanner() {
     };
 
     saveTimeoutRef.current = window.setTimeout(() => {
-      savePlannerState(state).catch(handleSaveError);
+      savePlannerState(state, remoteUpdatedAtRef.current)
+        .then((nextUpdatedAt) => {
+          remoteUpdatedAtRef.current = nextUpdatedAt;
+        })
+        .catch(handleSaveError);
     }, 500);
 
     return () => {
@@ -1248,7 +1254,11 @@ export function WeekPlanner() {
       timelineEvents
     };
 
-    savePlannerState(state).catch(handleSaveError);
+    savePlannerState(state, remoteUpdatedAtRef.current)
+      .then((nextUpdatedAt) => {
+        remoteUpdatedAtRef.current = nextUpdatedAt;
+      })
+      .catch(handleSaveError);
   }
 
   useEffect(() => {

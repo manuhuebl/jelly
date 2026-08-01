@@ -408,12 +408,27 @@ function getCardDeadlineDate(run: PrintRun, product: Product) {
   return getLatestSafeStart(run, product) ?? asDate(run.customerDeadline);
 }
 
-function getWeekStart(weekOffset: number) {
-  return addDays(asDate(BASE_WEEK_START), weekOffset * WEEK_DAYS);
+function getStartOfWeek(date: Date) {
+  const dayStart = getDayStart(date);
+  const day = dayStart.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  return addDays(dayStart, mondayOffset);
 }
 
-function getWeekEnd(weekStart: Date) {
-  return addDays(weekStart, WEEK_DAYS);
+function getInitialWeekStart(date: Date) {
+  const currentWeekStart = getStartOfWeek(date);
+  const firstPlanningWeek = asDate(BASE_WEEK_START);
+
+  return currentWeekStart < firstPlanningWeek ? firstPlanningWeek : currentWeekStart;
+}
+
+function getWeekStart(baseWeekStart: Date, weekOffset: number) {
+  return addDays(baseWeekStart, weekOffset * WEEK_DAYS);
+}
+
+function getWeekEnd(weekStart: Date, dayCount = WEEK_DAYS) {
+  return addDays(weekStart, dayCount);
 }
 
 function intersectsWeek(run: PrintRun, product: Product, weekStart: Date) {
@@ -432,6 +447,18 @@ function isWeekend(date: Date) {
 function getWeekDays(weekStart: Date) {
   return Array.from({ length: WEEK_DAYS }, (_, index) => {
     const date = addDays(weekStart, index);
+    return {
+      date,
+      label: formatDayHeading(date),
+      shortLabel: formatShortDayHeading(date)
+    };
+  });
+}
+
+function getMobileDays(weekStart: Date, weekCount: number) {
+  return Array.from({ length: weekCount * WEEK_DAYS }, (_, index) => {
+    const date = addDays(weekStart, index);
+
     return {
       date,
       label: formatDayHeading(date),
@@ -503,7 +530,11 @@ function buildSegmentsForRun(entry: ScheduledRun, weekStart: Date) {
 }
 
 function layoutSegments(segments: CalendarSegment[]) {
-  const segmentsByDay = Array.from({ length: WEEK_DAYS }, () => [] as CalendarSegment[]);
+  const dayCount = Math.max(
+    WEEK_DAYS,
+    ...segments.map((segment) => segment.dayIndex + 1)
+  );
+  const segmentsByDay = Array.from({ length: dayCount }, () => [] as CalendarSegment[]);
 
   segments.forEach((segment) => {
     segmentsByDay[segment.dayIndex].push(segment);
@@ -551,6 +582,47 @@ function layoutRuns(
     runCount: printerRuns.length,
     segments
   };
+}
+
+function getMobileDaySegments(
+  runs: PrintRun[],
+  printerId: PrinterId,
+  dayStart: Date,
+  dayIndex: number,
+  productMap: Map<string, Product>
+) {
+  const dayEnd = addDays(dayStart, 1);
+
+  return layoutSegments(
+    getScheduledRuns(runs, productMap)
+      .filter(
+        (entry) =>
+          entry.run.printerId === printerId &&
+          entry.start < dayEnd &&
+          entry.end > dayStart
+      )
+      .map((entry) => {
+        const segmentStart = getLaterDate(entry.start, dayStart);
+        const segmentEnd = getEarlierDate(entry.end, dayEnd);
+
+        return {
+          ...entry,
+          dayIndex,
+          durationHours: getHoursBetween(segmentStart, segmentEnd),
+          lane: 0,
+          laneCount: 1,
+          segmentEnd,
+          segmentStart,
+          startsBeforeSegment: entry.start < segmentStart,
+          continuesAfterSegment: entry.end > segmentEnd,
+          topHours: getHoursBetween(dayStart, segmentStart)
+        };
+      })
+  ).sort(
+    (a, b) =>
+      a.segmentStart.getTime() - b.segmentStart.getTime() ||
+      a.lane - b.lane
+  );
 }
 
 function getWeekRuns(
@@ -935,9 +1007,10 @@ function getTimelineEntries(
   runs: PrintRun[],
   events: TimelineEvent[],
   weekStart: Date,
-  productMap: Map<string, Product>
+  productMap: Map<string, Product>,
+  dayCount = WEEK_DAYS
 ): TimelineEntry[] {
-  const weekEnd = getWeekEnd(weekStart);
+  const weekEnd = getWeekEnd(weekStart, dayCount);
   const deadlines = new Map<string, TimelineEvent>();
 
   getScheduledRuns(runs, productMap).forEach((entry) => {
@@ -1066,7 +1139,11 @@ function getDropStartFromBoard(
 
 export function WeekPlanner() {
   const [runs, setRuns] = useState<PrintRun[]>(printRuns);
+  const [baseWeekStart, setBaseWeekStart] = useState(() =>
+    getInitialWeekStart(new Date())
+  );
   const [weekOffset, setWeekOffset] = useState(0);
+  const [mobileWeekCount, setMobileWeekCount] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [editPrint, setEditPrint] = useState<NewPrintForm | null>(null);
@@ -1127,7 +1204,7 @@ export function WeekPlanner() {
   const saveTimeoutRef = useRef<number | null>(null);
   const skipNextSaveRef = useRef(true);
   const suppressClickRunId = useRef<string | null>(null);
-  const weekStart = getWeekStart(weekOffset);
+  const weekStart = getWeekStart(baseWeekStart, weekOffset);
   const weekDays = getWeekDays(weekStart);
   const productById = useMemo(
     () => new Map(productData.map((product) => [product.id, product])),
@@ -1180,6 +1257,15 @@ export function WeekPlanner() {
   const canSaveEventEdit = Boolean(selectedEvent && editEvent?.title.trim());
   const canSaveDeadlineEdit = Boolean(selectedDeadline && editDeadlineDate);
   const timelineEntries = getTimelineEntries(runs, timelineEvents, weekStart, productById);
+  const mobileDays = getMobileDays(weekStart, mobileWeekCount);
+  const mobileTimelineEntries = getTimelineEntries(
+    runs,
+    timelineEvents,
+    weekStart,
+    productById,
+    mobileWeekCount * WEEK_DAYS
+  );
+  const canLoadMoreMobileWeeks = mobileWeekCount < MAX_WEEK_OFFSET + 1;
   const pendingStartRun = pendingStartRunId
     ? runs.find((run) => run.id === pendingStartRunId)
     : null;
@@ -1289,7 +1375,20 @@ export function WeekPlanner() {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setNow(new Date());
+      const nextNow = new Date();
+
+      setNow(nextNow);
+      setBaseWeekStart((current) => {
+        const nextBaseWeekStart = getInitialWeekStart(nextNow);
+
+        if (current.getTime() === nextBaseWeekStart.getTime()) {
+          return current;
+        }
+
+        setWeekOffset(0);
+        setMobileWeekCount(1);
+        return nextBaseWeekStart;
+      });
     }, 60 * 1000);
 
     return () => window.clearInterval(interval);
@@ -2651,9 +2750,10 @@ export function WeekPlanner() {
               <button
                 aria-label="Previous week"
                 className="week-arrow is-left"
-                onClick={() =>
-                  setWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET))
-                }
+                onClick={() => {
+                  setWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET));
+                  setMobileWeekCount(1);
+                }}
                 type="button"
               >
               </button>
@@ -2675,9 +2775,10 @@ export function WeekPlanner() {
               <button
                 aria-label="Next week"
                 className={`week-arrow is-right ${!canGoBack ? "is-single" : ""}`}
-                onClick={() =>
-                  setWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET))
-                }
+                onClick={() => {
+                  setWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET));
+                  setMobileWeekCount(1);
+                }}
                 type="button"
               >
               </button>
@@ -2686,9 +2787,9 @@ export function WeekPlanner() {
         </div>
 
         <section className="mobile-agenda" aria-label="Mobile printer schedule">
-          {weekDays.map((day, dayIndex) => {
+          {mobileDays.map((day, dayIndex) => {
             const dayEnd = addDays(day.date, 1);
-            const dayEvents = timelineEntries.filter(
+            const dayEvents = mobileTimelineEntries.filter(
               (entry) => entry.start < dayEnd && entry.end >= day.date
             );
 
@@ -2731,13 +2832,13 @@ export function WeekPlanner() {
               ) : null}
               <div className="mobile-printer-list">
                 {printers.map((printer) => {
-                  const segments = layoutRuns(runs, printer.id, weekStart, productById).segments
-                    .filter((segment) => segment.dayIndex === dayIndex)
-                    .sort(
-                      (a, b) =>
-                        a.segmentStart.getTime() - b.segmentStart.getTime() ||
-                        a.lane - b.lane
-                    );
+                  const segments = getMobileDaySegments(
+                    runs,
+                    printer.id,
+                    day.date,
+                    dayIndex,
+                    productById
+                  );
 
                   return (
                     <section className="mobile-printer-block" key={printer.id}>
@@ -2802,6 +2903,19 @@ export function WeekPlanner() {
             </section>
             );
           })}
+          {canLoadMoreMobileWeeks ? (
+            <button
+              className="mobile-next-week-button"
+              onClick={() =>
+                setMobileWeekCount((current) =>
+                  Math.min(current + 1, MAX_WEEK_OFFSET + 1)
+                )
+              }
+              type="button"
+            >
+              -&gt; next week
+            </button>
+          ) : null}
         </section>
 
         <section className="printer-calendars" aria-label="Printer schedule">

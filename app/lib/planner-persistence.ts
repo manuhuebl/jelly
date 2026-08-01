@@ -93,7 +93,7 @@ export async function loadPlannerState() {
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    const timeout = window.setTimeout(() => controller.abort(), 3500);
 
     try {
       const response = await fetch(

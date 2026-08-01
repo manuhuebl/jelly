@@ -68,12 +68,25 @@ select {
 
 .loading-shell {
   display: block;
+  position: relative;
+}
+
+.loading-shell > .eyebrow {
+  left: 50%;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .load-error-panel {
   align-items: center;
   display: flex;
   gap: 12px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .auth-shell {
@@ -235,7 +248,10 @@ h2 {
   background: #7a2632;
   border-color: #681f2a;
   color: var(--surface);
-  max-width: min(380px, calc(100vw - 40px));
+  max-width: none;
+  right: var(--page-padding);
+  top: 131px;
+  width: calc(var(--calendar-day-width) - 8px);
 }
 
 .start-popup {
@@ -1169,6 +1185,10 @@ h2 {
   display: none;
 }
 
+.mobile-next-week-button {
+  display: none;
+}
+
 .event-timeline {
   display: grid;
   gap: 10px;
@@ -1519,6 +1539,7 @@ h2 {
 }
 
 .product-list {
+  align-items: start;
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -1690,6 +1711,7 @@ h2 {
     min-height: 50px;
     padding-right: 48px;
     right: 14px;
+    width: auto;
   }
 
   .inventory-popup {
@@ -1759,6 +1781,22 @@ h2 {
     display: grid;
     gap: 14px;
     margin-top: 8px;
+  }
+
+  .mobile-next-week-button {
+    align-items: center;
+    background: transparent;
+    border: 1px solid var(--ink);
+    border-radius: 6px;
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: 16px;
+    justify-content: center;
+    justify-self: stretch;
+    min-height: 44px;
+    padding: 10px 14px;
   }
 
   .event-timeline {

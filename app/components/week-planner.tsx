@@ -230,6 +230,13 @@ type ProductInventoryRow = Product & {
   stockCount: number;
 };
 
+type NewProductForm = {
+  color: string;
+  name: string;
+  pelletUsageKg: string;
+  printDurationHours: string;
+};
+
 function asDate(value: string) {
   return new Date(value);
 }
@@ -340,6 +347,28 @@ function getProductStyle(product: Product): ProductStyle {
     "--product-color": product.color,
     "--product-border": product.borderColor
   };
+}
+
+function getProductIdFromName(name: string, existingProducts: Product[]) {
+  const baseId =
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || `product-${Date.now()}`;
+  const existingIds = new Set(existingProducts.map((product) => product.id));
+
+  if (!existingIds.has(baseId)) {
+    return baseId;
+  }
+
+  let index = 2;
+
+  while (existingIds.has(`${baseId}-${index}`)) {
+    index += 1;
+  }
+
+  return `${baseId}-${index}`;
 }
 
 function getPreviewStyle(product: Product): PreviewStyle {
@@ -1066,6 +1095,13 @@ export function WeekPlanner() {
     createDefaultEventForm(asDate(BASE_WEEK_START))
   );
   const [productData, setProductData] = useState<Product[]>(products);
+  const [isNewProductOpen, setIsNewProductOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState<NewProductForm>({
+    color: "#d3d0cb",
+    name: "",
+    pelletUsageKg: "",
+    printDurationHours: ""
+  });
   const [materialStockKg, setMaterialStockKg] = useState(pelletInventory.currentStockKg);
   const [isMaterialAddOpen, setIsMaterialAddOpen] = useState(false);
   const [materialAddKg, setMaterialAddKg] = useState("");
@@ -1401,6 +1437,37 @@ export function WeekPlanner() {
           : product
       )
     );
+  }
+
+  function addProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const name = newProduct.name.trim().toLowerCase();
+    const printDurationHours = Number(newProduct.printDurationHours);
+    const pelletUsageKg = Number(newProduct.pelletUsageKg);
+
+    if (!name || printDurationHours <= 0 || pelletUsageKg < 0) {
+      return;
+    }
+
+    setProductData((current) => [
+      ...current,
+      {
+        borderColor: newProduct.color,
+        color: newProduct.color,
+        id: getProductIdFromName(name, current),
+        name,
+        pelletUsageKg,
+        printDurationHours
+      }
+    ]);
+    setNewProduct({
+      color: "#d3d0cb",
+      name: "",
+      pelletUsageKg: "",
+      printDurationHours: ""
+    });
+    setIsNewProductOpen(false);
   }
 
   function toggleInventoryEdit(productId: Product["id"]) {
@@ -2225,7 +2292,6 @@ export function WeekPlanner() {
             <strong>Material low</strong>
             <span>{reorderMessage}</span>
           </div>
-          <button type="button">Order pellets</button>
           <button
             aria-label="Close material warning"
             className="icon-button popup-close"
@@ -2461,7 +2527,7 @@ export function WeekPlanner() {
       ) : null}
 
       {selectedRun && editPrint && selectedProduct && editProduct && editStart && editEnd ? (
-        <section className="add-print-panel" aria-label="Edit print">
+        <section className="add-print-panel edit-print-panel" aria-label="Edit print">
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Edit print</p>
@@ -3363,8 +3429,96 @@ export function WeekPlanner() {
       </section>
 
       <details className="data-drawer">
-        <summary>Product data</summary>
+        <summary>
+          <span>Product data</span>
+          <button
+            className="mini-edit-pill product-add-button"
+            onClick={(event) => {
+              event.preventDefault();
+              setIsNewProductOpen((current) => !current);
+            }}
+            type="button"
+          >
+            + product
+          </button>
+        </summary>
         <div className="drawer-grid">
+          {isNewProductOpen ? (
+            <form className="product-create-form" onSubmit={addProduct}>
+              <label>
+                <span>product</span>
+                <input
+                  autoFocus
+                  value={newProduct.name}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({
+                      ...current,
+                      name: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>printing time</span>
+                <input
+                  min="0"
+                  step="0.5"
+                  type="number"
+                  value={newProduct.printDurationHours}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({
+                      ...current,
+                      printDurationHours: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>weight</span>
+                <input
+                  min="0"
+                  step="0.5"
+                  type="number"
+                  value={newProduct.pelletUsageKg}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({
+                      ...current,
+                      pelletUsageKg: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>color</span>
+                <input
+                  type="color"
+                  value={newProduct.color}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({
+                      ...current,
+                      color: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <button
+                disabled={
+                  !newProduct.name.trim() ||
+                  Number(newProduct.printDurationHours) <= 0 ||
+                  Number(newProduct.pelletUsageKg) < 0
+                }
+                type="submit"
+              >
+                save
+              </button>
+              <button
+                aria-label="Cancel new product"
+                className="icon-button"
+                onClick={() => setIsNewProductOpen(false)}
+                type="button"
+              />
+            </form>
+          ) : null}
           <div className="product-list">
             {visibleProducts.map((product) => (
               <article className="product-row" key={product.id} style={getProductStyle(product)}>

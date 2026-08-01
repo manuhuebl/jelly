@@ -221,7 +221,7 @@ h2 {
   padding: 10px;
   position: fixed;
   right: 20px;
-  top: 118px;
+  top: 109px;
   z-index: 20;
 }
 
@@ -468,7 +468,7 @@ h2 {
   background-position: center;
   background-repeat: no-repeat;
   background-size: 18px auto;
-  border: 1px solid var(--ink);
+  border: 0;
   border-radius: 6px;
   color: transparent;
   cursor: pointer;
@@ -1418,6 +1418,7 @@ h2 {
   display: flex;
   font-size: 11px;
   gap: 14px;
+  justify-content: flex-start;
   list-style: none;
   padding: 12px;
   text-transform: uppercase;
@@ -1444,12 +1445,71 @@ h2 {
   background-image: url("/icons/pfeil-oben.svg");
 }
 
+.product-add-button {
+  margin-left: auto;
+}
+
 .drawer-grid {
   border-top: 1px solid var(--line-soft);
   display: grid;
   gap: 12px;
   grid-template-columns: 1fr;
   padding: 12px;
+}
+
+.product-create-form {
+  align-items: end;
+  border-bottom: 1px solid var(--line-soft);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  padding-bottom: 12px;
+}
+
+.product-create-form label {
+  display: grid;
+  gap: 4px;
+}
+
+.product-create-form label span {
+  color: var(--ink-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.product-create-form input {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 12px;
+  height: 38px;
+  line-height: 1.2;
+  min-height: 38px;
+  min-width: 0;
+  padding: 7px 9px;
+}
+
+.product-create-form input[type="color"] {
+  padding: 3px;
+}
+
+.product-create-form button:not(.icon-button) {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  color: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  min-height: 38px;
+  padding: 7px 12px;
+}
+
+.product-create-form button:disabled {
+  background: var(--surface-muted);
+  border-color: var(--line-soft);
+  color: rgba(96, 103, 93, 0.58);
+  cursor: default;
 }
 
 .product-list {
@@ -1624,6 +1684,24 @@ h2 {
     right: 14px;
   }
 
+  .inventory-popup {
+    top: 86px;
+  }
+
+  .edit-print-panel {
+    position: relative;
+  }
+
+  .edit-print-panel .panel-heading {
+    padding-right: 34px;
+  }
+
+  .edit-print-panel > .panel-heading > .icon-button {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+  }
+
   .week-arrow {
     background-size: 17px auto;
     height: 21px;
@@ -1664,6 +1742,10 @@ h2 {
     display: grid;
     gap: 14px;
     margin-top: 8px;
+  }
+
+  .event-timeline {
+    display: none;
   }
 
   .mobile-day {

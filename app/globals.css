@@ -70,6 +70,12 @@ select {
   display: block;
 }
 
+.load-error-panel {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
 .auth-shell {
   min-height: 100vh;
   position: relative;
@@ -1681,11 +1687,22 @@ h2 {
   .delete-popup {
     left: 14px;
     max-width: none;
+    min-height: 50px;
+    padding-right: 48px;
     right: 14px;
   }
 
   .inventory-popup {
     top: 86px;
+  }
+
+  .inventory-popup .popup-close,
+  .notice-popup .popup-close,
+  .delete-popup .popup-close {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
   }
 
   .edit-print-panel {

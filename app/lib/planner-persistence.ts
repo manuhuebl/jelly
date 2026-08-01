@@ -91,19 +91,64 @@ export async function loadPlannerState() {
     } satisfies LoadedPlannerState;
   }
 
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 2500);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
 
-  try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/planner_state?id=eq.${STATE_ID}&select=state,updated_at`,
-      {
-        headers: getHeaders(),
-        signal: controller.signal
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/planner_state?id=eq.${STATE_ID}&select=state,updated_at`,
+        {
+          headers: getHeaders(),
+          signal: controller.signal
+        }
+      );
+
+      if (!response.ok) {
+        if (attempt === 0) {
+          continue;
+        }
+
+        if (localState) {
+          return {
+            source: "local",
+            state: localState.state,
+            updatedAt: localState.remoteUpdatedAt ?? null
+          } satisfies LoadedPlannerState;
+        }
+
+        throw new Error(`Could not load planner state: ${response.status}`);
       }
-    );
 
-    if (!response.ok) {
+      const rows = (await response.json()) as Array<{
+        state: StoredPlannerState;
+        updated_at: string;
+      }>;
+      const remoteState = rows[0];
+
+      if (
+        localState &&
+        (!remoteState ||
+          (localState.remoteUpdatedAt === remoteState.updated_at &&
+            new Date(localState.savedAt) > new Date(remoteState.updated_at)))
+      ) {
+        return {
+          source: "local",
+          state: localState.state,
+          updatedAt: localState.remoteUpdatedAt ?? remoteState?.updated_at ?? null
+        } satisfies LoadedPlannerState;
+      }
+
+      return {
+        source: remoteState ? "remote" : localState ? "local" : "empty",
+        state: remoteState?.state ?? localState?.state ?? null,
+        updatedAt: remoteState?.updated_at ?? localState?.remoteUpdatedAt ?? null
+      } satisfies LoadedPlannerState;
+    } catch (error) {
+      if (attempt === 0) {
+        continue;
+      }
+
       if (localState) {
         return {
           source: "local",
@@ -112,46 +157,17 @@ export async function loadPlannerState() {
         } satisfies LoadedPlannerState;
       }
 
-      throw new Error(`Could not load planner state: ${response.status}`);
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
     }
-
-    const rows = (await response.json()) as Array<{
-      state: StoredPlannerState;
-      updated_at: string;
-    }>;
-    const remoteState = rows[0];
-
-    if (
-      localState &&
-      (!remoteState ||
-        (localState.remoteUpdatedAt === remoteState.updated_at &&
-          new Date(localState.savedAt) > new Date(remoteState.updated_at)))
-    ) {
-      return {
-        source: "local",
-        state: localState.state,
-        updatedAt: localState.remoteUpdatedAt ?? remoteState?.updated_at ?? null
-      } satisfies LoadedPlannerState;
-    }
-
-    return {
-      source: remoteState ? "remote" : localState ? "local" : "empty",
-      state: remoteState?.state ?? localState?.state ?? null,
-      updatedAt: remoteState?.updated_at ?? localState?.remoteUpdatedAt ?? null
-    } satisfies LoadedPlannerState;
-  } catch (error) {
-    if (localState) {
-      return {
-        source: "local",
-        state: localState.state,
-        updatedAt: localState.remoteUpdatedAt ?? null
-      } satisfies LoadedPlannerState;
-    }
-
-    throw error;
-  } finally {
-    window.clearTimeout(timeout);
   }
+
+  return {
+    source: "empty",
+    state: null,
+    updatedAt: null
+  } satisfies LoadedPlannerState;
 }
 
 export async function savePlannerState(

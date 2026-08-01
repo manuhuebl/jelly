@@ -1121,6 +1121,7 @@ export function WeekPlanner() {
   const [expandedRunIds, setExpandedRunIds] = useState<Set<string>>(() => new Set());
   const [now, setNow] = useState(() => new Date());
   const [isPlannerLoaded, setIsPlannerLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const nativeDragRef = useRef<NativeDragPayload | null>(null);
   const remoteUpdatedAtRef = useRef<string | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
@@ -1183,48 +1184,37 @@ export function WeekPlanner() {
     ? runs.find((run) => run.id === pendingStartRunId)
     : null;
 
-  useEffect(() => {
-    let isCancelled = false;
+  async function hydratePlannerState() {
+    setLoadError(false);
+    setIsPlannerLoaded(false);
 
-    async function loadStoredPlannerState() {
-      try {
-        const loadedState = await loadPlannerState();
+    try {
+      const loadedState = await loadPlannerState();
 
-        if (isCancelled) {
-          return;
-        }
+      remoteUpdatedAtRef.current = loadedState.updatedAt;
 
-        remoteUpdatedAtRef.current = loadedState.updatedAt;
-
-        if (loadedState.state) {
-          setRuns(loadedState.state.runs);
-          setTimelineEvents(
-            loadedState.state.timelineEvents.map((event) => ({
-              ...event,
-              type: event.type as TimelineKind
-            }))
-          );
-          setProductData(loadedState.state.productData);
-          setMaterialStockKg(loadedState.state.materialStockKg);
-          setManualProductInventory(loadedState.state.manualProductInventory);
-        }
-      } catch {
-        setNotice({
-          title: "Load failed",
-          body: "Refresh once, or check Supabase if this keeps happening."
-        });
-      } finally {
-        if (!isCancelled) {
-          setIsPlannerLoaded(true);
-        }
+      if (loadedState.state) {
+        setRuns(loadedState.state.runs);
+        setTimelineEvents(
+          loadedState.state.timelineEvents.map((event) => ({
+            ...event,
+            type: event.type as TimelineKind
+          }))
+        );
+        setProductData(loadedState.state.productData);
+        setMaterialStockKg(loadedState.state.materialStockKg);
+        setManualProductInventory(loadedState.state.manualProductInventory);
       }
+
+      skipNextSaveRef.current = true;
+      setIsPlannerLoaded(true);
+    } catch {
+      setLoadError(true);
     }
+  }
 
-    loadStoredPlannerState();
-
-    return () => {
-      isCancelled = true;
-    };
+  useEffect(() => {
+    hydratePlannerState();
   }, []);
 
   useEffect(() => {
@@ -2272,7 +2262,16 @@ export function WeekPlanner() {
         <header className="topbar">
           <img className="brand-logo" src="/logo/logo.png" alt="jelly" />
         </header>
-        <p className="eyebrow">loading planner</p>
+        {loadError ? (
+          <div className="load-error-panel">
+            <p className="eyebrow">load failed</p>
+            <button className="secondary-action" onClick={hydratePlannerState} type="button">
+              retry
+            </button>
+          </div>
+        ) : (
+          <p className="eyebrow">loading planner</p>
+        )}
       </main>
     );
   }

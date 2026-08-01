@@ -18,15 +18,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <img className="brand-logo" src="/logo/logo.png" alt="jelly" />
       </header>
       <form className="auth-card" action={login}>
-        <p className="eyebrow">internal planner</p>
-        <h1>password</h1>
         <input name="next" type="hidden" value={nextPath} />
-        <label>
-          <span>access</span>
-          <input autoFocus name="password" type="password" />
-        </label>
+        <div className="auth-field">
+          <label>
+            <span>Password</span>
+            <input autoFocus name="password" type="password" />
+          </label>
+          <button aria-label="Open planner" type="submit" />
+        </div>
         {hasError ? <p className="form-alert">wrong password</p> : null}
-        <button type="submit">open planner</button>
       </form>
     </main>
   );

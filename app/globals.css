@@ -61,6 +61,20 @@ select {
   font: inherit;
 }
 
+button:focus,
+input:focus,
+select:focus {
+  outline: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  border-color: var(--ink);
+  outline: 1px solid var(--ink);
+  outline-offset: 1px;
+}
+
 .app-shell {
   min-height: 100vh;
   padding: var(--page-padding);
@@ -232,6 +246,7 @@ h2 {
 }
 
 .inventory-popup,
+.box-popup,
 .start-popup,
 .notice-popup,
 .delete-popup {
@@ -259,6 +274,16 @@ h2 {
   width: var(--calendar-day-width);
 }
 
+.box-popup {
+  background: #7a2632;
+  border-color: #681f2a;
+  color: var(--surface);
+  max-width: none;
+  right: calc(var(--page-padding) + var(--calendar-day-width) + 8px);
+  top: 131px;
+  width: var(--calendar-day-width);
+}
+
 .start-popup {
   background: var(--surface);
   top: 182px;
@@ -279,6 +304,7 @@ h2 {
 }
 
 .inventory-popup div,
+.box-popup div,
 .start-popup div,
 .notice-popup div,
 .delete-popup div {
@@ -287,6 +313,7 @@ h2 {
 }
 
 .inventory-popup strong,
+.box-popup strong,
 .start-popup strong,
 .notice-popup strong,
 .delete-popup strong {
@@ -295,6 +322,7 @@ h2 {
 }
 
 .inventory-popup span,
+.box-popup span,
 .start-popup span,
 .notice-popup span,
 .delete-popup span {
@@ -302,6 +330,7 @@ h2 {
 }
 
 .inventory-popup button,
+.box-popup button,
 .start-popup button,
 .notice-popup button,
 .delete-popup button {
@@ -328,6 +357,7 @@ h2 {
 }
 
 .inventory-popup .popup-close,
+.box-popup .popup-close,
 .notice-popup .popup-close,
 .delete-popup .popup-close {
   background: transparent;
@@ -344,8 +374,15 @@ h2 {
 }
 
 .inventory-popup .popup-close,
+.box-popup .popup-close,
 .notice-popup .popup-close {
   filter: invert(1);
+}
+
+.notice-popup .undo-action {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.7);
+  color: var(--surface);
 }
 
 .start-popup .ghost-action {
@@ -527,10 +564,9 @@ h2 {
 }
 
 .inventory-summary {
-  align-items: center;
-  display: flex;
-  gap: 28px;
-  justify-content: space-between;
+  align-items: stretch;
+  display: grid;
+  gap: 14px;
   margin-top: 34px;
   padding: 12px;
 }
@@ -581,7 +617,7 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .material-add {
@@ -651,23 +687,22 @@ h2 {
 }
 
 .shipping-box-list {
-  display: grid;
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  margin-top: 12px;
   width: 100%;
 }
 
 .shipping-box-row {
   align-items: center;
-  background: var(--surface-muted);
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  display: grid;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  display: flex;
   gap: 6px;
-  grid-template-columns: 1fr auto auto;
-  min-height: 54px;
-  padding: 9px;
+  min-height: 28px;
+  padding: 0;
 }
 
 .shipping-box-row strong,
@@ -678,10 +713,8 @@ h2 {
 
 .shipping-box-row form {
   align-items: center;
-  display: grid;
+  display: flex;
   gap: 6px;
-  grid-column: 1 / -1;
-  grid-template-columns: 1fr 70px auto auto;
 }
 
 .shipping-box-row input {
@@ -932,6 +965,14 @@ h2 {
   opacity: 0.52;
 }
 
+.print-card.is-failed,
+.mobile-print-card.is-failed {
+  background: var(--action-red);
+  color: var(--surface);
+  filter: none;
+  opacity: 1;
+}
+
 .print-card.is-dragging {
   cursor: grabbing;
   outline: 2px solid rgba(31, 31, 29, 0.62);
@@ -1057,6 +1098,11 @@ h2 {
   margin-top: 0;
 }
 
+.print-card.status-printing .progress-track {
+  margin-bottom: 3px;
+  margin-top: 20px;
+}
+
 .print-card.has-starter:not(.status-printing):not(.status-finished):not(.status-failed):not(.is-continuation)
   .card-body {
   margin-top: 20px;
@@ -1109,6 +1155,7 @@ h2 {
   flex-wrap: wrap;
   gap: 4px;
   margin-top: auto;
+  min-height: 20px;
 }
 
 .card-actions button {
@@ -1122,6 +1169,7 @@ h2 {
   min-height: 20px;
   padding: 3px 6px;
   touch-action: auto;
+  white-space: nowrap;
 }
 
 .print-card.is-past .card-actions button {
@@ -1379,6 +1427,8 @@ h2 {
 
 .timeline-actions,
 .project-overview-heading {
+  display: flex;
+  justify-content: flex-end;
   margin-left: var(--time-gutter);
   width: var(--calendar-width);
 }
@@ -1399,6 +1449,11 @@ h2 {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  margin-left: var(--time-gutter);
+  width: var(--calendar-width);
+}
+
+.project-deadline-form {
   margin-left: var(--time-gutter);
   width: var(--calendar-width);
 }
@@ -1850,6 +1905,7 @@ h2 {
   .timeline-actions,
   .project-overview-heading,
   .project-form,
+  .project-deadline-form,
   .project-list,
   .inventory-summary,
   .product-inventory,
@@ -1909,6 +1965,7 @@ h2 {
   }
 
   .inventory-popup,
+  .box-popup,
   .start-popup,
   .notice-popup,
   .delete-popup {
@@ -1924,7 +1981,12 @@ h2 {
     top: 86px;
   }
 
+  .box-popup {
+    top: 146px;
+  }
+
   .inventory-popup .popup-close,
+  .box-popup .popup-close,
   .notice-popup .popup-close,
   .delete-popup .popup-close {
     position: absolute;
@@ -2121,6 +2183,13 @@ h2 {
     cursor: default;
     filter: grayscale(1) saturate(0);
     opacity: 0.52;
+  }
+
+  .mobile-print-card.is-failed {
+    background: var(--action-red);
+    color: var(--surface);
+    filter: none;
+    opacity: 1;
   }
 
   .mobile-card-topline {

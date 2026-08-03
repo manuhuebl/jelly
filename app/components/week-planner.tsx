@@ -139,6 +139,10 @@ type Notice = {
   body: string;
 };
 
+type PendingUndoMove = {
+  previousRun: PrintRun;
+};
+
 type NativeDragPayload =
   | {
       grabOffsetX: number;
@@ -1286,11 +1290,14 @@ export function WeekPlanner() {
   const [selectedDeadline, setSelectedDeadline] = useState<{
     originalDate: string;
     project: string;
+    source?: "project" | "timeline";
   } | null>(null);
   const [editDeadlineDate, setEditDeadlineDate] = useState("");
   const [pendingStartRunId, setPendingStartRunId] = useState<string | null>(null);
-  const [showInventoryPopup, setShowInventoryPopup] = useState(true);
+  const [showMaterialPopup, setShowMaterialPopup] = useState(true);
+  const [showBoxPopup, setShowBoxPopup] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [pendingUndoMove, setPendingUndoMove] = useState<PendingUndoMove | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [pendingWeekendAction, setPendingWeekendAction] =
@@ -1370,12 +1377,9 @@ export function WeekPlanner() {
   const lowShippingBoxes = shippingBoxTypes.filter(
     (boxType) => shippingBoxStock[boxType] < 2
   );
-  const materialWarnings = [
-    reorderDate ? reorderMessage : null,
-    ...lowShippingBoxes.map((boxType) => `reorder ${boxType} boxes`)
-  ].filter((warning): warning is string => Boolean(warning));
-  const isMaterialCritical = materialWarnings.length > 0;
-  const materialWarningMessage = materialWarnings.join(" / ");
+  const isMaterialCritical = reorderDate !== null;
+  const isBoxCritical = lowShippingBoxes.length > 0;
+  const boxWarningMessage = lowShippingBoxes.join(", ");
   const inventoryRows = getProductInventory(
     runs,
     now,
@@ -1916,7 +1920,8 @@ export function WeekPlanner() {
       setEditEvent(null);
       setSelectedDeadline({
         originalDate: formatDateInput(entry.start),
-        project: entry.deadlineProject ?? entry.title.replace(/^deadline\s+/i, "")
+        project: entry.deadlineProject ?? entry.title.replace(/^deadline\s+/i, ""),
+        source: "timeline"
       });
       setEditDeadlineDate(formatDateInput(entry.start));
       return;
@@ -2348,6 +2353,7 @@ export function WeekPlanner() {
 
       return nextRuns;
     });
+    setPendingUndoMove({ previousRun: run });
 
     if (selectedRunId === run.id) {
       setEditPrint(buildEditForm(movedRun));
@@ -2366,6 +2372,26 @@ export function WeekPlanner() {
           start
         )}.`
     });
+  }
+
+  function undoLastMove() {
+    if (!pendingUndoMove) {
+      return;
+    }
+
+    const restoredRun = pendingUndoMove.previousRun;
+
+    setRuns((current) => {
+      const nextRuns = current.map((entry) =>
+        entry.id === restoredRun.id ? restoredRun : entry
+      );
+
+      savePlannerSnapshot(nextRuns);
+
+      return nextRuns;
+    });
+    setPendingUndoMove(null);
+    setNotice(null);
   }
 
   function handlePrintPointerDown(
@@ -2675,16 +2701,31 @@ export function WeekPlanner() {
         </button>
       </header>
 
-      {isMaterialCritical && showInventoryPopup ? (
-        <aside className="inventory-popup" aria-label="Material warning">
+      {isMaterialCritical && showMaterialPopup ? (
+        <aside className="inventory-popup" aria-label="Pellet warning">
           <div>
-            <strong>Material low</strong>
-            <span>{materialWarningMessage}</span>
+            <strong>Reorder pellets</strong>
+            <span>{reorderMessage}</span>
           </div>
           <button
-            aria-label="Close material warning"
+            aria-label="Close pellet warning"
             className="icon-button popup-close"
-            onClick={() => setShowInventoryPopup(false)}
+            onClick={() => setShowMaterialPopup(false)}
+            type="button"
+          />
+        </aside>
+      ) : null}
+
+      {isBoxCritical && showBoxPopup ? (
+        <aside className="box-popup" aria-label="Box warning">
+          <div>
+            <strong>Reorder boxes</strong>
+            <span>{boxWarningMessage}</span>
+          </div>
+          <button
+            aria-label="Close box warning"
+            className="icon-button popup-close"
+            onClick={() => setShowBoxPopup(false)}
             type="button"
           />
         </aside>
@@ -2699,9 +2740,17 @@ export function WeekPlanner() {
           <button
             aria-label="Close notice"
             className="icon-button popup-close"
-            onClick={() => setNotice(null)}
+            onClick={() => {
+              setNotice(null);
+              setPendingUndoMove(null);
+            }}
             type="button"
           />
+          {pendingUndoMove ? (
+            <button className="ghost-action undo-action" onClick={undoLastMove} type="button">
+              undo
+            </button>
+          ) : null}
         </aside>
       ) : null}
 
@@ -3145,7 +3194,8 @@ export function WeekPlanner() {
                       ) : (
                         segments.map((segment) => {
                           const progress = getProgress(segment, now);
-                          const isPast = segment.end <= now;
+                          const isPast =
+                            segment.end <= now || segment.run.status === "finished";
                           const starter = segment.run.assignee
                             ? starterById.get(segment.run.assignee)
                             : null;
@@ -3160,6 +3210,8 @@ export function WeekPlanner() {
                             <article
                               className={`mobile-print-card status-${segment.run.status} ${
                                 isPast ? "is-past" : ""
+                              } ${
+                                segment.run.status === "failed" ? "is-failed" : ""
                               }`}
                               key={`${segment.run.id}-${segment.dayIndex}`}
                               style={getProductStyle(segment.product)}
@@ -3284,7 +3336,8 @@ export function WeekPlanner() {
                         );
                         const progress = getProgress(segment, now);
                         const actions = getRunActionLabels(segment, now);
-                        const isPast = segment.end <= now;
+                        const isPast =
+                          segment.end <= now || segment.run.status === "finished";
                         const cardActions = getCardActions(segment.run, actions, isPast);
                         const hasEditAction =
                           !segment.startsBeforeSegment && cardActions.includes("edit");
@@ -3320,6 +3373,8 @@ export function WeekPlanner() {
                             } ${isShort ? "is-short" : ""} ${
                               isExpanded ? "is-expanded" : ""
                             } ${isPast ? "is-past" : ""} ${
+                              segment.run.status === "failed" ? "is-failed" : ""
+                            } ${
                               canMoveRun(segment.run) ? "is-movable" : ""
                             } ${
                               starter ? "has-starter" : ""
@@ -3408,12 +3463,14 @@ export function WeekPlanner() {
                               ) : null}
                             </div>
 
-                            <div className="card-times">
-                              <span>{getTimeRangeLabel(segment)}</span>
-                              {cardDeadline ? (
-                                <span>deadline {formatCompactDate(cardDeadline)}</span>
-                              ) : null}
-                            </div>
+                            {progress === null ? (
+                              <div className="card-times">
+                                <span>{getTimeRangeLabel(segment)}</span>
+                                {cardDeadline ? (
+                                  <span>deadline {formatCompactDate(cardDeadline)}</span>
+                                ) : null}
+                              </div>
+                            ) : null}
 
                             {lowerCardActions.length > 0 ? (
                               <div className="card-actions">
@@ -3519,39 +3576,6 @@ export function WeekPlanner() {
                 onClick={() => {
                   setSelectedEventId(null);
                   setEditEvent(null);
-                }}
-                type="button"
-              />
-            </form>
-          ) : null}
-
-          {selectedDeadline ? (
-            <form
-              className="event-form event-edit-inline deadline-edit-inline"
-              aria-label="Edit deadline"
-              onSubmit={saveDeadlineEdit}
-            >
-              <label>
-                <span>deadline</span>
-                <input value={selectedDeadline.project} readOnly />
-              </label>
-              <label>
-                <span>date</span>
-                <input
-                  type="date"
-                  value={editDeadlineDate}
-                  onChange={(event) => setEditDeadlineDate(event.target.value)}
-                />
-              </label>
-              <button disabled={!canSaveDeadlineEdit} type="submit">
-                Save
-              </button>
-              <button
-                aria-label="Close deadline edit"
-                className="icon-button"
-                onClick={() => {
-                  setSelectedDeadline(null);
-                  setEditDeadlineDate("");
                 }}
                 type="button"
               />
@@ -3718,16 +3742,6 @@ export function WeekPlanner() {
       </section>
 
       <section className="project-overview" aria-label="Project overview">
-        <div className="project-overview-heading">
-          <button
-            className="secondary-action"
-            onClick={() => setIsProjectOpen((current) => !current)}
-            type="button"
-          >
-            + add project
-          </button>
-        </div>
-
         {isProjectOpen ? (
           <form className="project-form" onSubmit={addProject}>
             <label>
@@ -3758,12 +3772,45 @@ export function WeekPlanner() {
               />
             </label>
             <button disabled={!newProject.title.trim() || !newProject.deadline} type="submit">
-              save
+              Save
             </button>
             <button
               aria-label="Cancel project"
               className="icon-button"
               onClick={() => setIsProjectOpen(false)}
+              type="button"
+            />
+          </form>
+        ) : null}
+
+        {selectedDeadline ? (
+          <form
+            className="event-form event-edit-inline deadline-edit-inline project-deadline-form"
+            aria-label="Edit project deadline"
+            onSubmit={saveDeadlineEdit}
+          >
+            <label>
+              <span>deadline</span>
+              <input value={selectedDeadline.project} readOnly />
+            </label>
+            <label>
+              <span>date</span>
+              <input
+                type="date"
+                value={editDeadlineDate}
+                onChange={(event) => setEditDeadlineDate(event.target.value)}
+              />
+            </label>
+            <button disabled={!canSaveDeadlineEdit} type="submit">
+              Save
+            </button>
+            <button
+              aria-label="Close deadline edit"
+              className="icon-button"
+              onClick={() => {
+                setSelectedDeadline(null);
+                setEditDeadlineDate("");
+              }}
               type="button"
             />
           </form>
@@ -3796,7 +3843,8 @@ export function WeekPlanner() {
                       originalDate: project.deadline
                         ? formatDateInput(project.deadline)
                         : "",
-                      project: project.project
+                      project: project.project,
+                      source: "project"
                     });
                     setEditDeadlineDate(
                       project.deadline ? formatDateInput(project.deadline) : ""
@@ -3823,6 +3871,16 @@ export function WeekPlanner() {
               </article>
             );
           })}
+        </div>
+
+        <div className="project-overview-heading">
+          <button
+            className="secondary-action"
+            onClick={() => setIsProjectOpen((current) => !current)}
+            type="button"
+          >
+            + add project
+          </button>
         </div>
       </section>
 
@@ -3895,15 +3953,10 @@ export function WeekPlanner() {
                 onClick={() => setIsMaterialAddOpen(true)}
                 type="button"
               >
-                + add new material
+                + add pellets
               </button>
             )}
           </div>
-        </div>
-        <div className="inventory-metrics">
-          <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
-          <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
-          <span>{reorderMessage}</span>
         </div>
         <div className="shipping-box-list">
           {shippingBoxTypes.map((boxType) => (
@@ -3945,6 +3998,11 @@ export function WeekPlanner() {
               )}
             </article>
           ))}
+        </div>
+        <div className="inventory-metrics">
+          <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
+          <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
+          <span>{reorderMessage}</span>
         </div>
       </section>
 

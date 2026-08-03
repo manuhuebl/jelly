@@ -588,10 +588,7 @@ h2 {
 }
 
 .material-heading {
-  align-items: center;
-  display: flex;
-  gap: 20px;
-  justify-content: space-between;
+  display: block;
 }
 
 .material-heading .eyebrow {
@@ -663,13 +660,15 @@ h2 {
   margin-left: auto;
 }
 
-.material-add-form {
+.custom-material-form {
   align-items: end;
-  display: flex;
+  display: grid;
   gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
 }
 
-.material-add-form button:not(.icon-button) {
+.custom-material-form button:not(.icon-button) {
   background: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 6px;
@@ -680,7 +679,7 @@ h2 {
   padding: 6px 10px;
 }
 
-.material-add-form button:disabled {
+.custom-material-form button:disabled {
   background: var(--surface-muted);
   border-color: var(--line-soft);
   color: rgba(96, 103, 93, 0.58);
@@ -720,10 +719,10 @@ h2 {
 }
 
 .shipping-box-list {
-  align-items: center;
+  align-items: start;
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   width: 100%;
 }
 
@@ -1365,8 +1364,8 @@ h2 {
 
 .event-timeline {
   display: grid;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 8px;
   min-width: calc(var(--time-gutter) + var(--calendar-width));
 }
 
@@ -1486,7 +1485,11 @@ h2 {
 }
 
 .project-overview {
-  margin-top: 34px;
+  margin-top: 22px;
+}
+
+.inventory-summary {
+  margin-top: 12px;
 }
 
 .project-overview .eyebrow,
@@ -1506,7 +1509,13 @@ h2 {
 }
 
 .material-card-list {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  align-items: start;
+  grid-template-columns: 160px minmax(0, 1fr);
+}
+
+.material-card-list .inventory-metrics {
+  align-self: start;
+  justify-content: flex-start;
 }
 
 .project-row,
@@ -1608,6 +1617,38 @@ h2 {
   display: grid;
   gap: 6px;
   font-size: 13px;
+}
+
+.project-detail-row {
+  align-items: center;
+  color: var(--ink);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.project-detail-row.is-done {
+  color: var(--ink-muted);
+}
+
+.project-detail-row.is-done > span {
+  opacity: 0.48;
+}
+
+.project-detail-row em {
+  background: var(--surface-muted);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1;
+  padding: 3px 7px;
+}
+
+.project-shipped-button {
+  justify-self: end;
+  margin-top: 4px;
 }
 
 .timeline-item {
@@ -1991,6 +2032,11 @@ h2 {
 
   .inventory-metrics {
     justify-content: flex-start;
+  }
+
+  .material-card-list,
+  .custom-material-form {
+    grid-template-columns: 1fr;
   }
 
   .drawer-grid {

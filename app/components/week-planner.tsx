@@ -190,6 +190,19 @@ type PendingDelete =
       label: string;
     };
 
+type CustomMaterial = {
+  count: number;
+  id: string;
+  specification: string;
+  type: string;
+};
+
+type NewMaterialForm = {
+  count: string;
+  specification: string;
+  type: string;
+};
+
 type NewEventForm = {
   customColor: string;
   customLabel: string;
@@ -1335,12 +1348,17 @@ export function WeekPlanner() {
   const [shippingBoxStock, setShippingBoxStock] = useState(() =>
     normalizeShippingBoxStock()
   );
-  const [isMaterialAddOpen, setIsMaterialAddOpen] = useState(false);
-  const [materialAddKg, setMaterialAddKg] = useState("");
   const [isMaterialEditOpen, setIsMaterialEditOpen] = useState(false);
   const [materialEditKg, setMaterialEditKg] = useState("");
   const [editingBoxType, setEditingBoxType] = useState<ShippingBoxType | null>(null);
   const [boxEditCount, setBoxEditCount] = useState("");
+  const [customMaterials, setCustomMaterials] = useState<CustomMaterial[]>([]);
+  const [isMaterialCreateOpen, setIsMaterialCreateOpen] = useState(false);
+  const [newMaterial, setNewMaterial] = useState<NewMaterialForm>({
+    count: "",
+    specification: "",
+    type: ""
+  });
   const [manualProductInventory, setManualProductInventory] = useState<
     Record<string, number>
   >({});
@@ -1356,6 +1374,11 @@ export function WeekPlanner() {
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
     () => new Set()
   );
+  const [hiddenProjectIds, setHiddenProjectIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [pendingProjectRemoval, setPendingProjectRemoval] =
+    useState<ProjectOverviewRow | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [isPlannerLoaded, setIsPlannerLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -1438,7 +1461,9 @@ export function WeekPlanner() {
     mobileWeekCount * WEEK_DAYS
   );
   const canLoadMoreMobileWeeks = mobileWeekCount < MAX_WEEK_OFFSET + 1;
-  const projectRows = getProjectOverviewRows(runs, timelineEvents, productById);
+  const projectRows = getProjectOverviewRows(runs, timelineEvents, productById).filter(
+    (project) => !hiddenProjectIds.has(project.id)
+  );
   const pendingStartRun = pendingStartRunId
     ? runs.find((run) => run.id === pendingStartRunId)
     : null;
@@ -1461,6 +1486,8 @@ export function WeekPlanner() {
           }))
         );
         setProductData(normalizeProducts(loadedState.state.productData));
+        setCustomMaterials(loadedState.state.customMaterials ?? []);
+        setHiddenProjectIds(new Set(loadedState.state.hiddenProjectIds ?? []));
         setMaterialStockKg(loadedState.state.materialStockKg);
         setShippingBoxStock(normalizeShippingBoxStock(loadedState.state.shippingBoxStock));
         setManualProductInventory(loadedState.state.manualProductInventory);
@@ -1492,6 +1519,8 @@ export function WeekPlanner() {
     }
 
     const state: StoredPlannerState = {
+      customMaterials,
+      hiddenProjectIds: [...hiddenProjectIds],
       materialStockKg,
       manualProductInventory,
       productData,
@@ -1515,6 +1544,8 @@ export function WeekPlanner() {
     };
   }, [
     isPlannerLoaded,
+    customMaterials,
+    hiddenProjectIds,
     materialStockKg,
     manualProductInventory,
     productData,
@@ -1645,20 +1676,6 @@ export function WeekPlanner() {
     );
   }
 
-  function addMaterialStock(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const nextKg = Number(materialAddKg);
-
-    if (!Number.isFinite(nextKg) || nextKg <= 0) {
-      return;
-    }
-
-    setMaterialStockKg((current) => Number((current + nextKg).toFixed(1)));
-    setMaterialAddKg("");
-    setIsMaterialAddOpen(false);
-  }
-
   function openMaterialEdit() {
     setMaterialEditKg(String(materialStockKg));
     setIsMaterialEditOpen(true);
@@ -1699,6 +1716,34 @@ export function WeekPlanner() {
     setBoxEditCount("");
   }
 
+  function addCustomMaterial(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const count = Math.max(Math.floor(Number(newMaterial.count) || 0), 0);
+    const type = newMaterial.type.trim();
+    const specification = newMaterial.specification.trim();
+
+    if (!count || !type || !specification) {
+      return;
+    }
+
+    setCustomMaterials((current) => [
+      ...current,
+      {
+        count,
+        id: `material-${Date.now()}`,
+        specification,
+        type
+      }
+    ]);
+    setNewMaterial({
+      count: "",
+      specification: "",
+      type: ""
+    });
+    setIsMaterialCreateOpen(false);
+  }
+
   function toggleProject(projectId: string) {
     setExpandedProjectIds((current) => {
       const next = new Set(current);
@@ -1711,6 +1756,30 @@ export function WeekPlanner() {
 
       return next;
     });
+  }
+
+  function requestProjectRemoval(project: ProjectOverviewRow) {
+    setPendingProjectRemoval(project);
+  }
+
+  function confirmProjectRemoval() {
+    if (!pendingProjectRemoval) {
+      return;
+    }
+
+    setHiddenProjectIds((current) => {
+      const next = new Set(current);
+
+      next.add(pendingProjectRemoval.id);
+      return next;
+    });
+    setExpandedProjectIds((current) => {
+      const next = new Set(current);
+
+      next.delete(pendingProjectRemoval.id);
+      return next;
+    });
+    setPendingProjectRemoval(null);
   }
 
   function addProject(event: FormEvent<HTMLFormElement>) {
@@ -2831,6 +2900,24 @@ export function WeekPlanner() {
         </aside>
       ) : null}
 
+      {pendingProjectRemoval ? (
+        <aside className="delete-popup" aria-label="Confirm project removal">
+          <div>
+            <strong>remove from project overview?</strong>
+            <span>{pendingProjectRemoval.project}</span>
+          </div>
+          <button onClick={confirmProjectRemoval} type="button">
+            Remove
+          </button>
+          <button
+            aria-label="Cancel project removal"
+            className="icon-button popup-close"
+            onClick={() => setPendingProjectRemoval(null)}
+            type="button"
+          />
+        </aside>
+      ) : null}
+
       {isAddOpen ? (
         <section className="add-print-panel print-composer" aria-label="Add print">
           <div className="panel-heading composer-heading">
@@ -3791,12 +3878,29 @@ export function WeekPlanner() {
                       <span>no prints yet</span>
                     ) : (
                       project.runs.map((entry) => (
-                        <span key={entry.run.id}>
-                          {entry.product.name} / {formatCompactDate(entry.start)}{" "}
-                          {formatTime(entry.start)}
+                        <span
+                          className={`project-detail-row ${
+                            entry.run.status === "finished" ? "is-done" : ""
+                          }`}
+                          key={entry.run.id}
+                        >
+                          <span>
+                            {entry.product.name} / {formatCompactDate(entry.start)}{" "}
+                            {formatTime(entry.start)}-{formatTime(entry.end)}
+                          </span>
+                          {entry.run.status === "finished" ? <em>done</em> : null}
                         </span>
                       ))
                     )}
+                    {project.runs.length > 0 ? (
+                      <button
+                        className="mini-edit-pill project-shipped-button"
+                        onClick={() => requestProjectRemoval(project)}
+                        type="button"
+                      >
+                        shipped
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </article>
@@ -3809,11 +3913,6 @@ export function WeekPlanner() {
         <div className="material-heading">
           <div>
             <p className="eyebrow">Material inventory</p>
-          </div>
-          <div className="inventory-metrics">
-            <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
-            <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
-            <span>{reorderMessage}</span>
           </div>
         </div>
         <div className="material-card-list">
@@ -3843,7 +3942,11 @@ export function WeekPlanner() {
               </form>
             ) : (
               <>
-                <button className="mini-edit-pill material-edit-pill" onClick={openMaterialEdit} type="button">
+                <button
+                  className="mini-edit-pill material-edit-pill"
+                  onClick={openMaterialEdit}
+                  type="button"
+                >
                   edit
                 </button>
                 <strong>
@@ -3853,6 +3956,11 @@ export function WeekPlanner() {
               </>
             )}
           </article>
+          <div className="inventory-metrics">
+            <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
+            <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
+            <span>{reorderMessage}</span>
+          </div>
         </div>
         <div className="shipping-box-list">
           {shippingBoxTypes.map((boxType) => (
@@ -3896,20 +4004,85 @@ export function WeekPlanner() {
               )}
             </article>
           ))}
+          {customMaterials.map((material) => (
+            <article className="shipping-box-row" key={material.id}>
+              <div>
+                <strong>
+                  {material.count} {material.type}
+                </strong>
+                <span>{material.specification}</span>
+              </div>
+            </article>
+          ))}
           <button
             className="mini-edit-pill box-add-pill"
-            onClick={() =>
-              setNotice({
-                body: "Add the new box size in product data first.",
-                title: "Box size"
-              })
-            }
+            onClick={() => setIsMaterialCreateOpen(true)}
             type="button"
           >
-            + box
+            + material
           </button>
+          {isMaterialCreateOpen ? (
+            <form className="custom-material-form" onSubmit={addCustomMaterial}>
+              <label className="inventory-input">
+                <span>count</span>
+                <input
+                  min="1"
+                  type="number"
+                  value={newMaterial.count}
+                  onChange={(event) =>
+                    setNewMaterial((current) => ({
+                      ...current,
+                      count: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label className="inventory-input">
+                <span>type</span>
+                <input
+                  placeholder="bubble wrap"
+                  value={newMaterial.type}
+                  onChange={(event) =>
+                    setNewMaterial((current) => ({
+                      ...current,
+                      type: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label className="inventory-input">
+                <span>specification</span>
+                <input
+                  placeholder="100 m roll"
+                  value={newMaterial.specification}
+                  onChange={(event) =>
+                    setNewMaterial((current) => ({
+                      ...current,
+                      specification: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <button
+                disabled={
+                  !newMaterial.count ||
+                  !newMaterial.type.trim() ||
+                  !newMaterial.specification.trim()
+                }
+                type="submit"
+              >
+                save
+              </button>
+              <button
+                aria-label="Cancel material"
+                className="icon-button"
+                onClick={() => setIsMaterialCreateOpen(false)}
+                type="button"
+              />
+            </form>
+          ) : null}
         </div>
-      </section>
+	      </section>
 
       <section className="product-inventory" aria-label="Product inventory">
         <div className="section-heading">

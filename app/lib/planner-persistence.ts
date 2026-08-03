@@ -1,6 +1,13 @@
 import type { PrintRun, Product } from "../data/planner-data";
 
 export type StoredPlannerState = {
+  customMaterials?: Array<{
+    count: number;
+    id: string;
+    specification: string;
+    type: string;
+  }>;
+  hiddenProjectIds?: string[];
   materialStockKg: number;
   manualProductInventory: Record<string, number>;
   productData: Product[];

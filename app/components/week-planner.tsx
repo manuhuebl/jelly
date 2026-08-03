@@ -2753,17 +2753,15 @@ export function WeekPlanner() {
             <strong>{notice.title}</strong>
             <span>{notice.body}</span>
           </div>
-          {notice.tone !== "neutral" ? (
-            <button
-              aria-label="Close notice"
-              className="icon-button popup-close"
-              onClick={() => {
-                setNotice(null);
-                setPendingUndoMove(null);
-              }}
-              type="button"
-            />
-          ) : null}
+          <button
+            aria-label="Close notice"
+            className="icon-button popup-close"
+            onClick={() => {
+              setNotice(null);
+              setPendingUndoMove(null);
+            }}
+            type="button"
+          />
           {pendingUndoMove ? (
             <button className="ghost-action undo-action" onClick={undoLastMove} type="button">
               undo
@@ -3774,11 +3772,11 @@ export function WeekPlanner() {
                   type="button"
                 >
                   <strong>{project.project}</strong>
-                  <span>{project.runs.length} pcs</span>
-                  <span>
-                    deadline{" "}
-                    {project.deadline ? formatCompactDate(project.deadline) : "not set"}
+                  <span className="project-meta">
+                    <em>{project.runs.length}</em>
+                    {project.deadline ? <small>by {formatCompactDate(project.deadline)}</small> : null}
                   </span>
+                  <span className={`project-arrow ${isExpanded ? "is-open" : ""}`} aria-hidden="true" />
                 </button>
                 {isExpanded ? (
                   <div className="project-details">
@@ -3906,8 +3904,10 @@ export function WeekPlanner() {
                 </form>
               ) : (
                 <>
-                  <strong>{boxType}</strong>
-                  <span>{shippingBoxStock[boxType]} boxes</span>
+                  <div>
+                    <strong>{shippingBoxStock[boxType]} boxes</strong>
+                    <span>{boxType}</span>
+                  </div>
                   <button
                     className="mini-edit-pill"
                     onClick={() => openBoxEdit(boxType)}

@@ -137,6 +137,7 @@ type DragState = {
 type Notice = {
   title: string;
   body: string;
+  tone?: "default" | "neutral";
 };
 
 type PendingUndoMove = {
@@ -772,14 +773,15 @@ function getProjectOverviewRows(
 
   getScheduledRuns(runs, productMap).forEach((entry) => {
     const project = entry.run.project.trim();
+    const projectKey = project.toLowerCase();
 
     if (!project) {
       return;
     }
 
-    const current = projects.get(project) ?? {
+    const current = projects.get(projectKey) ?? {
       deadline: null,
-      id: project,
+      id: projectKey,
       project,
       runs: []
     };
@@ -791,7 +793,7 @@ function getProjectOverviewRows(
       current.deadline = deadline;
     }
 
-    projects.set(project, current);
+    projects.set(projectKey, current);
   });
 
   events
@@ -799,14 +801,15 @@ function getProjectOverviewRows(
     .forEach((event) => {
       const project =
         event.deadlineProject ?? event.title.replace(/^deadline\s+/i, "").trim();
+      const projectKey = project.toLowerCase();
 
       if (!project) {
         return;
       }
 
-      const current = projects.get(project) ?? {
+      const current = projects.get(projectKey) ?? {
         deadline: null,
-        id: project,
+        id: projectKey,
         project,
         runs: []
       };
@@ -816,7 +819,7 @@ function getProjectOverviewRows(
         current.deadline = deadline;
       }
 
-      projects.set(project, current);
+      projects.set(projectKey, current);
     });
 
   return [...projects.values()].sort((a, b) => {
@@ -2364,14 +2367,24 @@ export function WeekPlanner() {
       ? getDeadlineWarning(movedRun, movedProduct, now)
       : null;
 
-    setNotice({
+    const nextNotice: Notice = {
       title: deadlineWarning ? "Deadline warning" : "Print moved",
       body:
         deadlineWarning ??
         `${movedProduct?.name ?? "print"} starts ${formatCompactDate(start)} ${formatTime(
           start
-        )}.`
-    });
+        )}.`,
+      tone: deadlineWarning ? "default" : "neutral"
+    };
+
+    setNotice(nextNotice);
+
+    if (!deadlineWarning) {
+      window.setTimeout(() => {
+        setNotice((current) => (current === nextNotice ? null : current));
+        setPendingUndoMove((current) => (current?.previousRun.id === run.id ? null : current));
+      }, 5000);
+    }
   }
 
   function undoLastMove() {
@@ -2732,20 +2745,25 @@ export function WeekPlanner() {
       ) : null}
 
       {notice ? (
-        <aside className="notice-popup" aria-label="Notice">
+        <aside
+          className={`notice-popup ${notice.tone === "neutral" ? "is-neutral" : ""}`}
+          aria-label="Notice"
+        >
           <div>
             <strong>{notice.title}</strong>
             <span>{notice.body}</span>
           </div>
-          <button
-            aria-label="Close notice"
-            className="icon-button popup-close"
-            onClick={() => {
-              setNotice(null);
-              setPendingUndoMove(null);
-            }}
-            type="button"
-          />
+          {notice.tone !== "neutral" ? (
+            <button
+              aria-label="Close notice"
+              className="icon-button popup-close"
+              onClick={() => {
+                setNotice(null);
+                setPendingUndoMove(null);
+              }}
+              type="button"
+            />
+          ) : null}
           {pendingUndoMove ? (
             <button className="ghost-action undo-action" onClick={undoLastMove} type="button">
               undo
@@ -3742,79 +3760,7 @@ export function WeekPlanner() {
       </section>
 
       <section className="project-overview" aria-label="Project overview">
-        {isProjectOpen ? (
-          <form className="project-form" onSubmit={addProject}>
-            <label>
-              <span>project</span>
-              <input
-                autoFocus
-                placeholder="project"
-                value={newProject.title}
-                onChange={(event) =>
-                  setNewProject((current) => ({
-                    ...current,
-                    title: event.target.value
-                  }))
-                }
-              />
-            </label>
-            <label>
-              <span>deadline</span>
-              <input
-                type="date"
-                value={newProject.deadline}
-                onChange={(event) =>
-                  setNewProject((current) => ({
-                    ...current,
-                    deadline: event.target.value
-                  }))
-                }
-              />
-            </label>
-            <button disabled={!newProject.title.trim() || !newProject.deadline} type="submit">
-              Save
-            </button>
-            <button
-              aria-label="Cancel project"
-              className="icon-button"
-              onClick={() => setIsProjectOpen(false)}
-              type="button"
-            />
-          </form>
-        ) : null}
-
-        {selectedDeadline ? (
-          <form
-            className="event-form event-edit-inline deadline-edit-inline project-deadline-form"
-            aria-label="Edit project deadline"
-            onSubmit={saveDeadlineEdit}
-          >
-            <label>
-              <span>deadline</span>
-              <input value={selectedDeadline.project} readOnly />
-            </label>
-            <label>
-              <span>date</span>
-              <input
-                type="date"
-                value={editDeadlineDate}
-                onChange={(event) => setEditDeadlineDate(event.target.value)}
-              />
-            </label>
-            <button disabled={!canSaveDeadlineEdit} type="submit">
-              Save
-            </button>
-            <button
-              aria-label="Close deadline edit"
-              className="icon-button"
-              onClick={() => {
-                setSelectedDeadline(null);
-                setEditDeadlineDate("");
-              }}
-              type="button"
-            />
-          </form>
-        ) : null}
+        <p className="eyebrow">Project overview</p>
 
         <div className="project-list">
           {projectRows.map((project) => {
@@ -3834,26 +3780,6 @@ export function WeekPlanner() {
                     {project.deadline ? formatCompactDate(project.deadline) : "not set"}
                   </span>
                 </button>
-                <button
-                  className="mini-edit-pill project-deadline-edit"
-                  onClick={() => {
-                    setSelectedEventId(null);
-                    setEditEvent(null);
-                    setSelectedDeadline({
-                      originalDate: project.deadline
-                        ? formatDateInput(project.deadline)
-                        : "",
-                      project: project.project,
-                      source: "project"
-                    });
-                    setEditDeadlineDate(
-                      project.deadline ? formatDateInput(project.deadline) : ""
-                    );
-                  }}
-                  type="button"
-                >
-                  edit
-                </button>
                 {isExpanded ? (
                   <div className="project-details">
                     {project.runs.length === 0 ? (
@@ -3871,16 +3797,6 @@ export function WeekPlanner() {
               </article>
             );
           })}
-        </div>
-
-        <div className="project-overview-heading">
-          <button
-            className="secondary-action"
-            onClick={() => setIsProjectOpen((current) => !current)}
-            type="button"
-          >
-            + add project
-          </button>
         </div>
       </section>
 
@@ -3957,6 +3873,11 @@ export function WeekPlanner() {
               </button>
             )}
           </div>
+          <div className="inventory-metrics">
+            <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
+            <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
+            <span>{reorderMessage}</span>
+          </div>
         </div>
         <div className="shipping-box-list">
           {shippingBoxTypes.map((boxType) => (
@@ -3998,11 +3919,6 @@ export function WeekPlanner() {
               )}
             </article>
           ))}
-        </div>
-        <div className="inventory-metrics">
-          <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
-          <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
-          <span>{reorderMessage}</span>
         </div>
       </section>
 

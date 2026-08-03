@@ -3699,6 +3699,21 @@ export function WeekPlanner() {
             </form>
           ) : null}
 
+          <div className="timeline-actions">
+            <button
+              className="secondary-action"
+              onClick={() => {
+                setSelectedEventId(null);
+                setEditEvent(null);
+                setSelectedDeadline(null);
+                setEditDeadlineDate("");
+                setIsEventOpen((current) => !current);
+              }}
+              type="button"
+            >
+              + create event
+            </button>
+          </div>
           <div className="timeline-row">
             <div className="calendar-time-spacer" />
             <div className="timeline-board">
@@ -3738,21 +3753,6 @@ export function WeekPlanner() {
                 );
               })}
             </div>
-          </div>
-          <div className="timeline-actions">
-            <button
-              className="secondary-action"
-              onClick={() => {
-                setSelectedEventId(null);
-                setEditEvent(null);
-                setSelectedDeadline(null);
-                setEditDeadlineDate("");
-                setIsEventOpen((current) => !current);
-              }}
-              type="button"
-            >
-              + create event
-            </button>
           </div>
         </section>
       </section>
@@ -3802,6 +3802,15 @@ export function WeekPlanner() {
         <div className="material-heading">
           <div>
             <p className="eyebrow">Material inventory</p>
+          </div>
+          <div className="inventory-metrics">
+            <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
+            <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
+            <span>{reorderMessage}</span>
+          </div>
+        </div>
+        <div className="material-card-list">
+          <article className="material-card">
             {isMaterialEditOpen ? (
               <form className="material-stock-edit" onSubmit={saveMaterialStock}>
                 <label className="inventory-input">
@@ -3826,56 +3835,14 @@ export function WeekPlanner() {
                 />
               </form>
             ) : (
-              <div className="material-stock-line">
-                <h2>{materialStockKg} kg pellets</h2>
-                <button className="mini-edit-pill" onClick={openMaterialEdit} type="button">
+              <>
+                <button className="mini-edit-pill material-edit-pill" onClick={openMaterialEdit} type="button">
                   edit
                 </button>
-              </div>
+                <strong>{materialStockKg} kg pellets</strong>
+              </>
             )}
-          </div>
-          <div className="material-add">
-            {isMaterialAddOpen ? (
-              <form className="material-add-form" onSubmit={addMaterialStock}>
-                <label className="inventory-input">
-                  <span>kg</span>
-                  <input
-                    autoFocus
-                    min="0"
-                    step="0.5"
-                    type="number"
-                    value={materialAddKg}
-                    onChange={(event) => setMaterialAddKg(event.target.value)}
-                  />
-                </label>
-                <button disabled={!Number(materialAddKg)} type="submit">
-                  Add
-                </button>
-                <button
-                  aria-label="Cancel material input"
-                  className="icon-button"
-                  onClick={() => {
-                    setIsMaterialAddOpen(false);
-                    setMaterialAddKg("");
-                  }}
-                  type="button"
-                />
-              </form>
-            ) : (
-              <button
-                className="secondary-action"
-                onClick={() => setIsMaterialAddOpen(true)}
-                type="button"
-              >
-                + add pellets
-              </button>
-            )}
-          </div>
-          <div className="inventory-metrics">
-            <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
-            <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
-            <span>{reorderMessage}</span>
-          </div>
+          </article>
         </div>
         <div className="shipping-box-list">
           {shippingBoxTypes.map((boxType) => (
@@ -3909,7 +3876,7 @@ export function WeekPlanner() {
                     <span>{boxType}</span>
                   </div>
                   <button
-                    className="mini-edit-pill"
+                    className="mini-edit-pill material-edit-pill"
                     onClick={() => openBoxEdit(boxType)}
                     type="button"
                   >
@@ -3919,6 +3886,18 @@ export function WeekPlanner() {
               )}
             </article>
           ))}
+          <button
+            className="mini-edit-pill box-add-pill"
+            onClick={() =>
+              setNotice({
+                body: "Add the new box size in product data first.",
+                title: "Box size"
+              })
+            }
+            type="button"
+          >
+            + box
+          </button>
         </div>
       </section>
 

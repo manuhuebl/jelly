@@ -325,7 +325,7 @@ h2 {
 .start-popup strong,
 .notice-popup strong,
 .delete-popup strong {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 500;
 }
 
@@ -582,7 +582,7 @@ h2 {
 .inventory-summary {
   align-items: stretch;
   display: grid;
-  gap: 20px;
+  gap: 12px;
   margin-top: 34px;
   padding: 12px;
 }
@@ -598,20 +598,42 @@ h2 {
   margin-bottom: 12px;
 }
 
-.material-stock-line {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-}
-
-.material-stock-line h2 {
-  font-size: 28px;
-}
-
 .material-stock-edit {
   align-items: end;
   display: flex;
   gap: 8px;
+}
+
+.material-card-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.material-card,
+.shipping-box-row {
+  align-items: start;
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  min-height: 82px;
+  padding: 10px;
+  position: relative;
+}
+
+.material-card strong {
+  display: block;
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1;
+  padding-right: 38px;
+}
+
+.material-edit-pill {
+  position: absolute;
+  right: 8px;
+  top: 8px;
 }
 
 .material-stock-edit button:not(.icon-button) {
@@ -639,17 +661,6 @@ h2 {
   gap: 8px;
   justify-content: flex-end;
   margin-left: auto;
-}
-
-.material-add {
-  align-items: center;
-  display: flex;
-  justify-content: flex-start;
-}
-
-.material-add .secondary-action {
-  min-height: 48px;
-  width: 180px;
 }
 
 .material-add-form {
@@ -716,23 +727,12 @@ h2 {
   width: 100%;
 }
 
-.shipping-box-row {
-  align-items: start;
-  background: var(--surface-muted);
-  border: 0;
-  border-radius: 6px;
-  display: grid;
-  gap: 12px;
-  min-height: 82px;
-  padding: 10px;
-  position: relative;
-}
-
 .shipping-box-row strong {
   display: block;
   font-size: 26px;
   font-weight: 400;
   line-height: 1;
+  padding-right: 38px;
 }
 
 .shipping-box-row span {
@@ -766,6 +766,11 @@ h2 {
   color: var(--surface);
   min-height: 30px;
   padding: 5px 8px;
+}
+
+.box-add-pill {
+  align-self: end;
+  justify-self: end;
 }
 
 .calendar-shell {
@@ -1463,7 +1468,8 @@ h2 {
   display: flex;
   justify-content: flex-end;
   margin-left: var(--time-gutter);
-  margin-top: -6px;
+  margin-bottom: -14px;
+  margin-top: -10px;
   width: var(--calendar-width);
 }
 
@@ -1481,10 +1487,15 @@ h2 {
   padding: 12px;
 }
 
+.project-overview .eyebrow {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
 .project-list {
   display: grid;
-  gap: 34px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   width: 100%;
 }
 
@@ -1493,9 +1504,9 @@ h2 {
   border: 0;
   border-radius: 6px;
   display: grid;
-  gap: 16px;
-  min-height: 138px;
-  padding: 24px;
+  gap: 8px;
+  min-height: 74px;
+  padding: 10px;
   position: relative;
 }
 
@@ -1507,14 +1518,14 @@ h2 {
   cursor: pointer;
   display: grid;
   font: inherit;
-  gap: 18px;
-  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 18px;
   padding: 0;
   text-align: left;
 }
 
 .project-summary strong {
-  font-size: 38px;
+  font-size: 16px;
   font-weight: 400;
   grid-column: 1 / -1;
   line-height: 1;
@@ -1530,13 +1541,13 @@ h2 {
 }
 
 .project-meta em {
-  font-size: 28px;
+  font-size: 24px;
   font-style: normal;
   line-height: 1;
 }
 
 .project-meta small {
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1;
 }
 
@@ -1544,11 +1555,11 @@ h2 {
   background-image: url("/icons/pfeil-unten.svg");
   background-position: center;
   background-repeat: no-repeat;
-  background-size: 20px auto;
+  background-size: 12px auto;
   display: block;
-  height: 28px;
+  height: 18px;
   justify-self: end;
-  width: 28px;
+  width: 18px;
 }
 
 .project-arrow.is-open {

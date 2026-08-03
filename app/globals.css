@@ -1529,11 +1529,12 @@ h2 {
 
 .material-card-list {
   align-items: start;
-  grid-template-columns: 160px minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
 .material-card-list .inventory-metrics {
   align-self: start;
+  grid-column: span 3;
   justify-content: flex-start;
 }
 

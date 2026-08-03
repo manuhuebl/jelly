@@ -2901,7 +2901,7 @@ export function WeekPlanner() {
       ) : null}
 
       {pendingProjectRemoval ? (
-        <aside className="delete-popup" aria-label="Confirm project removal">
+        <aside className="delete-popup is-neutral" aria-label="Confirm project removal">
           <div>
             <strong>remove from project overview?</strong>
             <span>{pendingProjectRemoval.project}</span>
@@ -3884,22 +3884,34 @@ export function WeekPlanner() {
                           }`}
                           key={entry.run.id}
                         >
-                          <span>
-                            {entry.product.name} / {formatCompactDate(entry.start)}{" "}
-                            {formatTime(entry.start)}-{formatTime(entry.end)}
+                          <span className="project-detail-copy">
+                            <strong>{entry.product.name}</strong>
+                            <small>
+                              {formatCompactDate(entry.start)} {formatTime(entry.start)}-
+                              {formatTime(entry.end)}
+                            </small>
                           </span>
                           {entry.run.status === "finished" ? <em>done</em> : null}
                         </span>
                       ))
                     )}
                     {project.runs.length > 0 ? (
-                      <button
-                        className="mini-edit-pill project-shipped-button"
-                        onClick={() => requestProjectRemoval(project)}
-                        type="button"
-                      >
-                        shipped
-                      </button>
+                      <div className="project-detail-actions">
+                        <button
+                          className="mini-edit-pill project-shipped-button"
+                          onClick={() => requestProjectRemoval(project)}
+                          type="button"
+                        >
+                          shipped
+                        </button>
+                        <button
+                          className="mini-edit-pill project-remove-button"
+                          onClick={() => requestProjectRemoval(project)}
+                          type="button"
+                        >
+                          remove
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                 ) : null}

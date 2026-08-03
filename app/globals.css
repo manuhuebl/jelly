@@ -1365,8 +1365,8 @@ h2 {
 
 .event-timeline {
   display: grid;
-  gap: 3px;
-  margin-top: 24px;
+  gap: 12px;
+  margin-top: 12px;
   min-width: calc(var(--time-gutter) + var(--calendar-width));
 }
 
@@ -1468,8 +1468,6 @@ h2 {
   display: flex;
   justify-content: flex-end;
   margin-left: var(--time-gutter);
-  margin-bottom: -14px;
-  margin-top: -10px;
   width: var(--calendar-width);
 }
 
@@ -1477,29 +1475,44 @@ h2 {
   width: 160px;
 }
 
-.project-overview {
+.project-overview,
+.inventory-summary {
   background: var(--surface);
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   display: grid;
   gap: 12px;
-  margin-top: 34px;
   padding: 12px;
 }
 
-.project-overview .eyebrow {
-  font-size: 28px;
+.project-overview {
+  margin-top: 34px;
+}
+
+.project-overview .eyebrow,
+.inventory-summary .eyebrow {
+  font-size: 10px;
   margin-bottom: 4px;
 }
 
-.project-list {
+.project-list,
+.material-card-list,
+.shipping-box-list {
+  align-items: start;
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   width: 100%;
 }
 
-.project-row {
+.material-card-list {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.project-row,
+.material-card,
+.shipping-box-row {
+  align-content: start;
   background: var(--surface-muted);
   border: 0;
   border-radius: 6px;
@@ -1511,27 +1524,51 @@ h2 {
 }
 
 .project-summary {
-  align-items: end;
   background: transparent;
   border: 0;
   color: var(--ink);
   cursor: pointer;
   display: grid;
   font: inherit;
-  gap: 8px;
   grid-template-columns: minmax(0, 1fr) 18px;
+  min-height: 54px;
   padding: 0;
   text-align: left;
 }
 
-.project-summary strong {
+.project-card-main {
+  align-content: space-between;
+  display: grid;
+  gap: 8px;
+  min-height: 54px;
+}
+
+.project-summary {
+  grid-template-columns: minmax(0, 1fr) 18px;
+}
+
+.project-summary strong,
+.material-card strong,
+.shipping-box-row strong {
   font-size: 16px;
   font-weight: 400;
-  grid-column: 1 / -1;
   line-height: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.material-card .material-amount {
+  display: block;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.material-card .material-unit {
+  display: block;
+  font-size: 12px;
+  line-height: 1;
+  margin-top: 6px;
 }
 
 .project-meta {

@@ -3771,12 +3771,19 @@ export function WeekPlanner() {
                   onClick={() => toggleProject(project.id)}
                   type="button"
                 >
-                  <strong>{project.project}</strong>
-                  <span className="project-meta">
-                    <em>{project.runs.length}</em>
-                    {project.deadline ? <small>by {formatCompactDate(project.deadline)}</small> : null}
+                  <span className="project-card-main">
+                    <strong>{project.project}</strong>
+                    <span className="project-meta">
+                      <em>{project.runs.length}</em>
+                      {project.deadline ? (
+                        <small>by {formatCompactDate(project.deadline)}</small>
+                      ) : null}
+                    </span>
                   </span>
-                  <span className={`project-arrow ${isExpanded ? "is-open" : ""}`} aria-hidden="true" />
+                  <span
+                    className={`project-arrow ${isExpanded ? "is-open" : ""}`}
+                    aria-hidden="true"
+                  />
                 </button>
                 {isExpanded ? (
                   <div className="project-details">
@@ -3839,7 +3846,10 @@ export function WeekPlanner() {
                 <button className="mini-edit-pill material-edit-pill" onClick={openMaterialEdit} type="button">
                   edit
                 </button>
-                <strong>{materialStockKg} kg pellets</strong>
+                <strong>
+                  <span className="material-amount">{materialStockKg} kg</span>
+                  <span className="material-unit">pellets</span>
+                </strong>
               </>
             )}
           </article>

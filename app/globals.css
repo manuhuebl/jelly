@@ -740,8 +740,6 @@ h2 {
   flex-wrap: wrap;
   gap: 12px;
   min-height: 74px;
-  padding-right: 94px;
-  position: relative;
   width: 100%;
 }
 
@@ -791,9 +789,8 @@ h2 {
 }
 
 .box-add-pill {
-  bottom: 0;
-  position: absolute;
-  right: 0;
+  align-self: flex-end;
+  margin-left: auto;
 }
 
 .calendar-shell {
@@ -1388,7 +1385,7 @@ h2 {
 
 .event-timeline {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   margin-top: 8px;
   min-width: calc(var(--time-gutter) + var(--calendar-width));
 }

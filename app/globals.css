@@ -739,6 +739,9 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  min-height: 74px;
+  padding-right: 94px;
+  position: relative;
   width: 100%;
 }
 
@@ -788,9 +791,9 @@ h2 {
 }
 
 .box-add-pill {
-  align-self: flex-end;
-  margin-bottom: 2px;
-  margin-left: auto;
+  bottom: 0;
+  position: absolute;
+  right: 0;
 }
 
 .calendar-shell {

@@ -736,15 +736,14 @@ h2 {
 
 .shipping-box-list {
   align-items: start;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 12px;
-  min-height: 74px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   width: 100%;
 }
 
 .shipping-box-row {
-  flex: 0 0 160px;
+  min-width: 0;
 }
 
 .shipping-box-row strong {
@@ -789,8 +788,8 @@ h2 {
 }
 
 .box-add-pill {
-  align-self: flex-end;
-  margin-left: auto;
+  align-self: end;
+  justify-self: start;
 }
 
 .calendar-shell {

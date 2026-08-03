@@ -5,6 +5,7 @@ export type StoredPlannerState = {
   manualProductInventory: Record<string, number>;
   productData: Product[];
   runs: PrintRun[];
+  shippingBoxStock?: Record<string, number>;
   timelineEvents: Array<{
     color?: string;
     endDateTime: string;

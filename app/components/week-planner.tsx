@@ -13,12 +13,15 @@ import {
   printers,
   printRuns,
   products,
+  shippingBoxInventory,
+  shippingBoxTypes,
   studioTasks,
   type JobStatus,
   type PrintAssignee,
   type PrinterId,
   type PrintRun,
-  type Product
+  type Product,
+  type ShippingBoxType
 } from "../data/planner-data";
 import {
   loadPlannerState,
@@ -38,6 +41,7 @@ const MIN_WEEK_OFFSET = 0;
 const MAX_WEEK_OFFSET = 4;
 const HOURS = Array.from({ length: DAY_HOURS }, (_, hour) => hour);
 const HOUR_LINES = Array.from({ length: DAY_HOURS + 1 }, (_, hour) => hour);
+const DEFAULT_SHIPPING_BOX_TYPE: ShippingBoxType = "50x50x50";
 
 function getVisibleProducts(productList: Product[]) {
   return [...productList].sort((a, b) => {
@@ -46,6 +50,17 @@ function getVisibleProducts(productList: Product[]) {
 
   return getSortGroup(a) - getSortGroup(b);
   });
+}
+
+function normalizeProduct(product: Product): Product {
+  return {
+    ...product,
+    shippingBoxType: product.shippingBoxType ?? DEFAULT_SHIPPING_BOX_TYPE
+  };
+}
+
+function normalizeProducts(productList: Product[]) {
+  return productList.map(normalizeProduct);
 }
 
 const statusLabels = {
@@ -235,6 +250,19 @@ type NewProductForm = {
   name: string;
   pelletUsageKg: string;
   printDurationHours: string;
+  shippingBoxType: ShippingBoxType;
+};
+
+type NewProjectForm = {
+  deadline: string;
+  title: string;
+};
+
+type ProjectOverviewRow = {
+  deadline: Date | null;
+  id: string;
+  project: string;
+  runs: ScheduledRun[];
 };
 
 function asDate(value: string) {
@@ -347,6 +375,16 @@ function getProductStyle(product: Product): ProductStyle {
     "--product-color": product.color,
     "--product-border": product.borderColor
   };
+}
+
+function normalizeShippingBoxStock(stock?: Record<string, number>) {
+  return shippingBoxTypes.reduce(
+    (nextStock, boxType) => ({
+      ...nextStock,
+      [boxType]: Math.max(Number(stock?.[boxType] ?? shippingBoxInventory[boxType] ?? 0), 0)
+    }),
+    {} as Record<ShippingBoxType, number>
+  );
 }
 
 function getProductIdFromName(name: string, existingProducts: Product[]) {
@@ -719,6 +757,79 @@ function getProductInventory(
     baseStockCount: manualStock[product.id] ?? 0,
     stockCount: (manualStock[product.id] ?? 0) + (completedCounts.get(product.id) ?? 0)
   }));
+}
+
+function getProjectOverviewRows(
+  runs: PrintRun[],
+  events: TimelineEvent[],
+  productMap: Map<string, Product>
+): ProjectOverviewRow[] {
+  const projects = new Map<string, ProjectOverviewRow>();
+
+  getScheduledRuns(runs, productMap).forEach((entry) => {
+    const project = entry.run.project.trim();
+
+    if (!project) {
+      return;
+    }
+
+    const current = projects.get(project) ?? {
+      deadline: null,
+      id: project,
+      project,
+      runs: []
+    };
+    const deadline = entry.run.customerDeadline ? asDate(entry.run.customerDeadline) : null;
+
+    current.runs.push(entry);
+
+    if (deadline && (!current.deadline || deadline < current.deadline)) {
+      current.deadline = deadline;
+    }
+
+    projects.set(project, current);
+  });
+
+  events
+    .filter((event) => event.type === "deadline")
+    .forEach((event) => {
+      const project =
+        event.deadlineProject ?? event.title.replace(/^deadline\s+/i, "").trim();
+
+      if (!project) {
+        return;
+      }
+
+      const current = projects.get(project) ?? {
+        deadline: null,
+        id: project,
+        project,
+        runs: []
+      };
+      const deadline = asDate(event.startDateTime);
+
+      if (!current.deadline || deadline < current.deadline) {
+        current.deadline = deadline;
+      }
+
+      projects.set(project, current);
+    });
+
+  return [...projects.values()].sort((a, b) => {
+    if (a.deadline && b.deadline) {
+      return a.deadline.getTime() - b.deadline.getTime();
+    }
+
+    if (a.deadline) {
+      return -1;
+    }
+
+    if (b.deadline) {
+      return 1;
+    }
+
+    return a.project.localeCompare(b.project);
+  });
 }
 
 function buildStartDateTime(date: string, time: string) {
@@ -1188,25 +1299,38 @@ export function WeekPlanner() {
     ...initialTimelineEvents
   ]);
   const [isEventOpen, setIsEventOpen] = useState(false);
+  const [isProjectOpen, setIsProjectOpen] = useState(false);
+  const [newProject, setNewProject] = useState<NewProjectForm>({
+    deadline: "",
+    title: ""
+  });
   const [newPrint, setNewPrint] = useState<NewPrintForm>(() =>
     createDefaultPrintForm(asDate(BASE_WEEK_START))
   );
   const [newEvent, setNewEvent] = useState<NewEventForm>(() =>
     createDefaultEventForm(asDate(BASE_WEEK_START))
   );
-  const [productData, setProductData] = useState<Product[]>(products);
+  const [productData, setProductData] = useState<Product[]>(() =>
+    normalizeProducts(products)
+  );
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
   const [newProduct, setNewProduct] = useState<NewProductForm>({
     color: "#d3d0cb",
     name: "",
     pelletUsageKg: "",
-    printDurationHours: ""
+    printDurationHours: "",
+    shippingBoxType: DEFAULT_SHIPPING_BOX_TYPE
   });
   const [materialStockKg, setMaterialStockKg] = useState(pelletInventory.currentStockKg);
+  const [shippingBoxStock, setShippingBoxStock] = useState(() =>
+    normalizeShippingBoxStock()
+  );
   const [isMaterialAddOpen, setIsMaterialAddOpen] = useState(false);
   const [materialAddKg, setMaterialAddKg] = useState("");
   const [isMaterialEditOpen, setIsMaterialEditOpen] = useState(false);
   const [materialEditKg, setMaterialEditKg] = useState("");
+  const [editingBoxType, setEditingBoxType] = useState<ShippingBoxType | null>(null);
+  const [boxEditCount, setBoxEditCount] = useState("");
   const [manualProductInventory, setManualProductInventory] = useState<
     Record<string, number>
   >({});
@@ -1219,6 +1343,9 @@ export function WeekPlanner() {
   );
   const [savedProductDataId, setSavedProductDataId] = useState<string | null>(null);
   const [expandedRunIds, setExpandedRunIds] = useState<Set<string>>(() => new Set());
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [now, setNow] = useState(() => new Date());
   const [isPlannerLoaded, setIsPlannerLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -1240,7 +1367,15 @@ export function WeekPlanner() {
   const reorderMessage = reorderDate
     ? `reorder by ${formatCompactDate(reorderDate)} to avoid delays`
     : "no reorder needed next 2 weeks";
-  const isMaterialCritical = reorderDate !== null;
+  const lowShippingBoxes = shippingBoxTypes.filter(
+    (boxType) => shippingBoxStock[boxType] < 2
+  );
+  const materialWarnings = [
+    reorderDate ? reorderMessage : null,
+    ...lowShippingBoxes.map((boxType) => `reorder ${boxType} boxes`)
+  ].filter((warning): warning is string => Boolean(warning));
+  const isMaterialCritical = materialWarnings.length > 0;
+  const materialWarningMessage = materialWarnings.join(" / ");
   const inventoryRows = getProductInventory(
     runs,
     now,
@@ -1296,6 +1431,7 @@ export function WeekPlanner() {
     mobileWeekCount * WEEK_DAYS
   );
   const canLoadMoreMobileWeeks = mobileWeekCount < MAX_WEEK_OFFSET + 1;
+  const projectRows = getProjectOverviewRows(runs, timelineEvents, productById);
   const pendingStartRun = pendingStartRunId
     ? runs.find((run) => run.id === pendingStartRunId)
     : null;
@@ -1317,8 +1453,9 @@ export function WeekPlanner() {
             type: event.type as TimelineKind
           }))
         );
-        setProductData(loadedState.state.productData);
+        setProductData(normalizeProducts(loadedState.state.productData));
         setMaterialStockKg(loadedState.state.materialStockKg);
+        setShippingBoxStock(normalizeShippingBoxStock(loadedState.state.shippingBoxStock));
         setManualProductInventory(loadedState.state.manualProductInventory);
       }
 
@@ -1352,6 +1489,7 @@ export function WeekPlanner() {
       manualProductInventory,
       productData,
       runs,
+      shippingBoxStock,
       timelineEvents
     };
 
@@ -1374,6 +1512,7 @@ export function WeekPlanner() {
     manualProductInventory,
     productData,
     runs,
+    shippingBoxStock,
     timelineEvents
   ]);
 
@@ -1393,6 +1532,7 @@ export function WeekPlanner() {
       manualProductInventory,
       productData,
       runs: nextRuns,
+      shippingBoxStock,
       timelineEvents
     };
 
@@ -1530,6 +1670,69 @@ export function WeekPlanner() {
     setIsMaterialEditOpen(false);
   }
 
+  function openBoxEdit(boxType: ShippingBoxType) {
+    setEditingBoxType(boxType);
+    setBoxEditCount(String(shippingBoxStock[boxType]));
+  }
+
+  function saveBoxStock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingBoxType) {
+      return;
+    }
+
+    const nextCount = Math.max(Math.floor(Number(boxEditCount) || 0), 0);
+
+    setShippingBoxStock((current) => ({
+      ...current,
+      [editingBoxType]: nextCount
+    }));
+    setEditingBoxType(null);
+    setBoxEditCount("");
+  }
+
+  function toggleProject(projectId: string) {
+    setExpandedProjectIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+
+      return next;
+    });
+  }
+
+  function addProject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const project = newProject.title.trim().toLowerCase();
+
+    if (!project || !newProject.deadline) {
+      return;
+    }
+
+    setTimelineEvents((current) => [
+      ...current,
+      {
+        deadlineProject: project,
+        endDateTime: buildStartDateTime(newProject.deadline, "22:00"),
+        id: `project-deadline-${Date.now()}`,
+        startDateTime: buildStartDateTime(newProject.deadline, "18:00"),
+        title: `deadline ${project}`,
+        type: "deadline"
+      }
+    ]);
+    setNewProject({
+      deadline: "",
+      title: ""
+    });
+    setIsProjectOpen(false);
+  }
+
   function updateProductStock(productId: Product["id"], value: string) {
     const nextValue = Math.max(Math.floor(Number(value) || 0), 0);
 
@@ -1541,7 +1744,7 @@ export function WeekPlanner() {
 
   function updateProductData(
     productId: Product["id"],
-    field: "name" | "pelletUsageKg" | "printDurationHours",
+    field: "name" | "pelletUsageKg" | "printDurationHours" | "shippingBoxType",
     value: string
   ) {
     setProductData((current) =>
@@ -1552,6 +1755,8 @@ export function WeekPlanner() {
               [field]:
                 field === "name"
                   ? value.toLowerCase()
+                  : field === "shippingBoxType"
+                    ? (value as ShippingBoxType)
                   : Math.max(Number(value) || 0, 0)
             }
           : product
@@ -1578,14 +1783,16 @@ export function WeekPlanner() {
         id: getProductIdFromName(name, current),
         name,
         pelletUsageKg,
-        printDurationHours
+        printDurationHours,
+        shippingBoxType: newProduct.shippingBoxType
       }
     ]);
     setNewProduct({
       color: "#d3d0cb",
       name: "",
       pelletUsageKg: "",
-      printDurationHours: ""
+      printDurationHours: "",
+      shippingBoxType: DEFAULT_SHIPPING_BOX_TYPE
     });
     setIsNewProductOpen(false);
   }
@@ -1892,6 +2099,22 @@ export function WeekPlanner() {
           : run
       )
     );
+    setTimelineEvents((current) =>
+      current.map((event) => {
+        const project =
+          event.deadlineProject ?? event.title.replace(/^deadline\s+/i, "").trim();
+
+        return event.type === "deadline" && project === selectedDeadline.project
+          ? {
+              ...event,
+              deadlineProject: selectedDeadline.project,
+              endDateTime: buildStartDateTime(editDeadlineDate, "22:00"),
+              startDateTime: buildStartDateTime(editDeadlineDate, "18:00"),
+              title: `deadline ${selectedDeadline.project}`
+            }
+          : event;
+      })
+    );
     setSelectedDeadline(null);
     setEditDeadlineDate("");
   }
@@ -1953,6 +2176,15 @@ export function WeekPlanner() {
   }
 
   function updateRunStatus(run: PrintRun, status: JobStatus, startDateTime?: string) {
+    const product = productById.get(run.productId);
+
+    if (status === "finished" && run.status !== "finished" && product) {
+      setShippingBoxStock((current) => ({
+        ...current,
+        [product.shippingBoxType]: Math.max((current[product.shippingBoxType] ?? 0) - 1, 0)
+      }));
+    }
+
     setRuns((current) =>
       current.map((entry) =>
         entry.id === run.id
@@ -2447,7 +2679,7 @@ export function WeekPlanner() {
         <aside className="inventory-popup" aria-label="Material warning">
           <div>
             <strong>Material low</strong>
-            <span>{reorderMessage}</span>
+            <span>{materialWarningMessage}</span>
           </div>
           <button
             aria-label="Close material warning"
@@ -3059,7 +3291,7 @@ export function WeekPlanner() {
                         const lowerCardActions = segment.continuesAfterSegment
                           ? []
                           : cardActions.filter((action) => action !== "edit");
-                        const isShort = segment.durationHours <= 5;
+                        const isShort = segment.durationHours <= 5 && !segment.startsBeforeSegment;
                         const isExpanded = expandedRunIds.has(segment.run.id);
                         const showCompactProject =
                           isShort && !isExpanded && canShowCompactProject(segment);
@@ -3089,6 +3321,8 @@ export function WeekPlanner() {
                               isExpanded ? "is-expanded" : ""
                             } ${isPast ? "is-past" : ""} ${
                               canMoveRun(segment.run) ? "is-movable" : ""
+                            } ${
+                              starter ? "has-starter" : ""
                             } ${
                               activeDrag ? "is-dragging" : ""
                             }`}
@@ -3209,23 +3443,6 @@ export function WeekPlanner() {
         </section>
 
         <section className="event-timeline" aria-label="Marketing and deadline timeline">
-          <div className="timeline-title">
-            <p className="eyebrow">Events</p>
-            <button
-              className="primary-action"
-              onClick={() => {
-                setSelectedEventId(null);
-                setEditEvent(null);
-                setSelectedDeadline(null);
-                setEditDeadlineDate("");
-                setIsEventOpen((current) => !current);
-              }}
-              type="button"
-            >
-              + create event
-            </button>
-          </div>
-
           {selectedEvent && editEvent ? (
             <form
               className="event-form event-edit-inline"
@@ -3482,7 +3699,131 @@ export function WeekPlanner() {
               })}
             </div>
           </div>
+          <div className="timeline-actions">
+            <button
+              className="secondary-action"
+              onClick={() => {
+                setSelectedEventId(null);
+                setEditEvent(null);
+                setSelectedDeadline(null);
+                setEditDeadlineDate("");
+                setIsEventOpen((current) => !current);
+              }}
+              type="button"
+            >
+              + create event
+            </button>
+          </div>
         </section>
+      </section>
+
+      <section className="project-overview" aria-label="Project overview">
+        <div className="project-overview-heading">
+          <button
+            className="secondary-action"
+            onClick={() => setIsProjectOpen((current) => !current)}
+            type="button"
+          >
+            + add project
+          </button>
+        </div>
+
+        {isProjectOpen ? (
+          <form className="project-form" onSubmit={addProject}>
+            <label>
+              <span>project</span>
+              <input
+                autoFocus
+                placeholder="project"
+                value={newProject.title}
+                onChange={(event) =>
+                  setNewProject((current) => ({
+                    ...current,
+                    title: event.target.value
+                  }))
+                }
+              />
+            </label>
+            <label>
+              <span>deadline</span>
+              <input
+                type="date"
+                value={newProject.deadline}
+                onChange={(event) =>
+                  setNewProject((current) => ({
+                    ...current,
+                    deadline: event.target.value
+                  }))
+                }
+              />
+            </label>
+            <button disabled={!newProject.title.trim() || !newProject.deadline} type="submit">
+              save
+            </button>
+            <button
+              aria-label="Cancel project"
+              className="icon-button"
+              onClick={() => setIsProjectOpen(false)}
+              type="button"
+            />
+          </form>
+        ) : null}
+
+        <div className="project-list">
+          {projectRows.map((project) => {
+            const isExpanded = expandedProjectIds.has(project.id);
+
+            return (
+              <article className="project-row" key={project.id}>
+                <button
+                  className="project-summary"
+                  onClick={() => toggleProject(project.id)}
+                  type="button"
+                >
+                  <strong>{project.project}</strong>
+                  <span>{project.runs.length} pcs</span>
+                  <span>
+                    deadline{" "}
+                    {project.deadline ? formatCompactDate(project.deadline) : "not set"}
+                  </span>
+                </button>
+                <button
+                  className="mini-edit-pill project-deadline-edit"
+                  onClick={() => {
+                    setSelectedEventId(null);
+                    setEditEvent(null);
+                    setSelectedDeadline({
+                      originalDate: project.deadline
+                        ? formatDateInput(project.deadline)
+                        : "",
+                      project: project.project
+                    });
+                    setEditDeadlineDate(
+                      project.deadline ? formatDateInput(project.deadline) : ""
+                    );
+                  }}
+                  type="button"
+                >
+                  edit
+                </button>
+                {isExpanded ? (
+                  <div className="project-details">
+                    {project.runs.length === 0 ? (
+                      <span>no prints yet</span>
+                    ) : (
+                      project.runs.map((entry) => (
+                        <span key={entry.run.id}>
+                          {entry.product.name} / {formatCompactDate(entry.start)}{" "}
+                          {formatTime(entry.start)}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <section className="inventory-summary" aria-label="Material inventory">
@@ -3563,6 +3904,47 @@ export function WeekPlanner() {
           <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
           <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
           <span>{reorderMessage}</span>
+        </div>
+        <div className="shipping-box-list">
+          {shippingBoxTypes.map((boxType) => (
+            <article className="shipping-box-row" key={boxType}>
+              {editingBoxType === boxType ? (
+                <form onSubmit={saveBoxStock}>
+                  <strong>{boxType}</strong>
+                  <input
+                    min="0"
+                    type="number"
+                    value={boxEditCount}
+                    onChange={(event) => setBoxEditCount(event.target.value)}
+                  />
+                  <button disabled={!boxEditCount} type="submit">
+                    save
+                  </button>
+                  <button
+                    aria-label="Cancel box edit"
+                    className="icon-button"
+                    onClick={() => {
+                      setEditingBoxType(null);
+                      setBoxEditCount("");
+                    }}
+                    type="button"
+                  />
+                </form>
+              ) : (
+                <>
+                  <strong>{boxType}</strong>
+                  <span>{shippingBoxStock[boxType]} boxes</span>
+                  <button
+                    className="mini-edit-pill"
+                    onClick={() => openBoxEdit(boxType)}
+                    type="button"
+                  >
+                    edit
+                  </button>
+                </>
+              )}
+            </article>
+          ))}
         </div>
       </section>
 
@@ -3680,6 +4062,24 @@ export function WeekPlanner() {
                   }
                 />
               </label>
+              <label>
+                <span>box</span>
+                <select
+                  value={newProduct.shippingBoxType}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({
+                      ...current,
+                      shippingBoxType: event.target.value as ShippingBoxType
+                    }))
+                  }
+                >
+                  {shippingBoxTypes.map((boxType) => (
+                    <option key={boxType} value={boxType}>
+                      {boxType}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 disabled={
                   !newProduct.name.trim() ||
@@ -3751,6 +4151,21 @@ export function WeekPlanner() {
                         }
                       />
                     </label>
+                    <label>
+                      <span>box</span>
+                      <select
+                        value={product.shippingBoxType}
+                        onChange={(event) =>
+                          updateProductData(product.id, "shippingBoxType", event.target.value)
+                        }
+                      >
+                        {shippingBoxTypes.map((boxType) => (
+                          <option key={boxType} value={boxType}>
+                            {boxType}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
                 ) : (
                   <>
@@ -3759,6 +4174,7 @@ export function WeekPlanner() {
                       {product.isEstimated ? " estimated" : ""}
                     </span>
                     <span>Weight: {product.pelletUsageKg.toFixed(1)}kg</span>
+                    <span>Box: {product.shippingBoxType}</span>
                   </>
                 )}
               </article>

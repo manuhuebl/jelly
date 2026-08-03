@@ -6,6 +6,8 @@ export type Priority = "normal" | "urgent";
 
 export type PrintAssignee = "manu" | "julian" | "saqib";
 
+export type ShippingBoxType = "42x42x33" | "50x50x50" | "60x60x39" | "60x60x60";
+
 export type Product = {
   id: string;
   name: string;
@@ -13,6 +15,7 @@ export type Product = {
   pelletUsageKg: number;
   color: string;
   borderColor: string;
+  shippingBoxType: ShippingBoxType;
   isEstimated?: boolean;
 };
 
@@ -45,6 +48,20 @@ export const printers: Array<{ id: PrinterId; name: string; side: string }> = [
   { id: "printer-2", name: "2", side: "right" }
 ];
 
+export const shippingBoxTypes: ShippingBoxType[] = [
+  "60x60x60",
+  "50x50x50",
+  "60x60x39",
+  "42x42x33"
+];
+
+export const shippingBoxInventory: Record<ShippingBoxType, number> = {
+  "60x60x60": 0,
+  "50x50x50": 0,
+  "60x60x39": 0,
+  "42x42x33": 0
+};
+
 export const products: Product[] = [
   {
     id: "bench-center",
@@ -52,7 +69,8 @@ export const products: Product[] = [
     printDurationHours: 24,
     pelletUsageKg: 15,
     color: "#d8ccb5",
-    borderColor: "#d8ccb5"
+    borderColor: "#d8ccb5",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "bench-end-right",
@@ -60,7 +78,8 @@ export const products: Product[] = [
     printDurationHours: 24,
     pelletUsageKg: 15,
     color: "#e2d9c7",
-    borderColor: "#e2d9c7"
+    borderColor: "#e2d9c7",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "bench-end-left",
@@ -68,7 +87,8 @@ export const products: Product[] = [
     printDurationHours: 24,
     pelletUsageKg: 15,
     color: "#ebe5da",
-    borderColor: "#ebe5da"
+    borderColor: "#ebe5da",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "bench-without-backrest",
@@ -76,7 +96,8 @@ export const products: Product[] = [
     printDurationHours: 24,
     pelletUsageKg: 15,
     color: "#d3d0cb",
-    borderColor: "#d3d0cb"
+    borderColor: "#d3d0cb",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "len",
@@ -84,7 +105,8 @@ export const products: Product[] = [
     printDurationHours: 8.5,
     pelletUsageKg: 5.5,
     color: "#a1a3de",
-    borderColor: "#a1a3de"
+    borderColor: "#a1a3de",
+    shippingBoxType: "50x50x50"
   },
   {
     id: "len-4-leg",
@@ -92,7 +114,8 @@ export const products: Product[] = [
     printDurationHours: 9.5,
     pelletUsageKg: 6.5,
     color: "#b1b2d2",
-    borderColor: "#b1b2d2"
+    borderColor: "#b1b2d2",
+    shippingBoxType: "50x50x50"
   },
   {
     id: "len-m",
@@ -100,7 +123,8 @@ export const products: Product[] = [
     printDurationHours: 6.5,
     pelletUsageKg: 5,
     color: "#b8bae7",
-    borderColor: "#b8bae7"
+    borderColor: "#b8bae7",
+    shippingBoxType: "42x42x33"
   },
   {
     id: "len-s",
@@ -108,7 +132,8 @@ export const products: Product[] = [
     printDurationHours: 4.5,
     pelletUsageKg: 4.5,
     color: "#d0d1ef",
-    borderColor: "#d0d1ef"
+    borderColor: "#d0d1ef",
+    shippingBoxType: "42x42x33"
   },
   {
     id: "fib",
@@ -116,7 +141,8 @@ export const products: Product[] = [
     printDurationHours: 8.5,
     pelletUsageKg: 5.5,
     color: "#ef9263",
-    borderColor: "#ef9263"
+    borderColor: "#ef9263",
+    shippingBoxType: "50x50x50"
   },
   {
     id: "fib-m",
@@ -124,7 +150,8 @@ export const products: Product[] = [
     printDurationHours: 6.5,
     pelletUsageKg: 5,
     color: "#f3ad8a",
-    borderColor: "#f3ad8a"
+    borderColor: "#f3ad8a",
+    shippingBoxType: "42x42x33"
   },
   {
     id: "fib-s",
@@ -132,7 +159,8 @@ export const products: Product[] = [
     printDurationHours: 4.5,
     pelletUsageKg: 4.5,
     color: "#f7c9b1",
-    borderColor: "#f7c9b1"
+    borderColor: "#f7c9b1",
+    shippingBoxType: "42x42x33"
   },
   {
     id: "ony",
@@ -140,7 +168,8 @@ export const products: Product[] = [
     printDurationHours: 8.5,
     pelletUsageKg: 5.5,
     color: "#e6a5c4",
-    borderColor: "#e6a5c4"
+    borderColor: "#e6a5c4",
+    shippingBoxType: "50x50x50"
   },
   {
     id: "inu",
@@ -148,7 +177,8 @@ export const products: Product[] = [
     printDurationHours: 8.5,
     pelletUsageKg: 5.5,
     color: "#9aaf98",
-    borderColor: "#9aaf98"
+    borderColor: "#9aaf98",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "inu-m",
@@ -156,7 +186,8 @@ export const products: Product[] = [
     printDurationHours: 6.5,
     pelletUsageKg: 5,
     color: "#b3c3b2",
-    borderColor: "#b3c3b2"
+    borderColor: "#b3c3b2",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "inu-s",
@@ -164,7 +195,8 @@ export const products: Product[] = [
     printDurationHours: 4.5,
     pelletUsageKg: 4.5,
     color: "#cdd7cb",
-    borderColor: "#cdd7cb"
+    borderColor: "#cdd7cb",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "piu",
@@ -172,7 +204,8 @@ export const products: Product[] = [
     printDurationHours: 8.5,
     pelletUsageKg: 5.5,
     color: "#b9e6df",
-    borderColor: "#b9e6df"
+    borderColor: "#b9e6df",
+    shippingBoxType: "50x50x50"
   },
   {
     id: "banana-lamp-big",
@@ -180,7 +213,8 @@ export const products: Product[] = [
     printDurationHours: 3.5,
     pelletUsageKg: 1.5,
     color: "#e0c588",
-    borderColor: "#e0c588"
+    borderColor: "#e0c588",
+    shippingBoxType: "60x60x60"
   },
   {
     id: "banana-lamp-small",
@@ -188,7 +222,8 @@ export const products: Product[] = [
     printDurationHours: 3,
     pelletUsageKg: 1,
     color: "#e8d4a6",
-    borderColor: "#e8d4a6"
+    borderColor: "#e8d4a6",
+    shippingBoxType: "60x60x60"
   }
 ];
 

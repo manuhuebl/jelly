@@ -549,6 +549,16 @@ function getWeekStart(baseWeekStart: Date, weekOffset: number) {
   return addDays(baseWeekStart, weekOffset * WEEK_DAYS);
 }
 
+function getWeekOffsetForDate(baseWeekStart: Date, date: Date) {
+  const targetWeekStart = getStartOfWeek(date);
+
+  return clamp(
+    Math.round(getHoursBetween(baseWeekStart, targetWeekStart) / (DAY_HOURS * WEEK_DAYS)),
+    MIN_WEEK_OFFSET,
+    MAX_WEEK_OFFSET
+  );
+}
+
 function getWeekEnd(weekStart: Date, dayCount = WEEK_DAYS) {
   return addDays(weekStart, dayCount);
 }
@@ -2411,9 +2421,11 @@ export function WeekPlanner() {
     setIsEventOpen(false);
 
     if (!eventRangeIntersectsWeek(eventRange, weekStart)) {
+      setWeekOffset(getWeekOffsetForDate(baseWeekStart, asDate(eventRange.startDateTime)));
+      setMobileWeekCount(1);
       setNotice({
         title: "Event added",
-        body: "This event is outside the current week.",
+        body: "Jumped to the event week.",
         tone: "neutral"
       });
     }
@@ -3473,7 +3485,7 @@ export function WeekPlanner() {
             </label>
 
             <label>
-              <span>deadline optional</span>
+              <span>deadline</span>
               <div className="clearable-field">
                 <input
                   type="date"
@@ -3615,7 +3627,7 @@ export function WeekPlanner() {
             </label>
 
             <label>
-              <span>deadline optional</span>
+              <span>deadline</span>
               <div className="clearable-field">
                 <input
                   type="date"
@@ -4554,71 +4566,75 @@ export function WeekPlanner() {
               </>
             )}
           </article>
-          <span className="inventory-metric">
-            planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg
-          </span>
-          <span className="inventory-metric">
-            projected next 2 weeks {projectedStockKg.toFixed(1)} kg
-          </span>
-          <span className="inventory-metric">{reorderMessage}</span>
-          {shippingBoxTypes.map((boxType) => (
-            <article className="shipping-box-row" key={boxType}>
-              {editingBoxType === boxType ? (
-                <form onSubmit={saveBoxStock}>
-                  <strong>{boxType}</strong>
-                  <input
-                    min="0"
-                    type="number"
-                    value={boxEditCount}
-                    onChange={(event) => setBoxEditCount(event.target.value)}
-                  />
-                  <button disabled={!boxEditCount} type="submit">
-                    save
-                  </button>
-                  <button
-                    aria-label="Cancel box edit"
-                    className="icon-button"
-                    onClick={() => {
-                      setEditingBoxType(null);
-                      setBoxEditCount("");
-                    }}
-                    type="button"
-                  />
-                </form>
-              ) : (
-                <>
-                  <div>
-                    <strong>{shippingBoxStock[boxType]} boxes</strong>
-                    <span>{boxType}</span>
-                  </div>
-                  <button
-                    className="mini-edit-pill material-edit-pill"
-                    onClick={() => openBoxEdit(boxType)}
-                    type="button"
-                  >
-                    edit
-                  </button>
-                </>
-              )}
-            </article>
-          ))}
-          {customMaterials.map((material) => (
-            <article className="shipping-box-row" key={material.id}>
-              <div>
-                <strong>
-                  {material.count} {material.type}
-                </strong>
-                <span>{material.specification}</span>
-              </div>
-            </article>
-          ))}
-          <button
-            className="mini-edit-pill box-add-pill"
-            onClick={() => setIsMaterialCreateOpen(true)}
-            type="button"
-          >
-            + material
-          </button>
+          <div className="material-metrics">
+            <span className="inventory-metric">
+              planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg
+            </span>
+            <span className="inventory-metric">
+              projected next 2 weeks {projectedStockKg.toFixed(1)} kg
+            </span>
+            <span className="inventory-metric">{reorderMessage}</span>
+          </div>
+          <div className="material-box-grid">
+            {shippingBoxTypes.map((boxType) => (
+              <article className="shipping-box-row" key={boxType}>
+                {editingBoxType === boxType ? (
+                  <form onSubmit={saveBoxStock}>
+                    <strong>{boxType}</strong>
+                    <input
+                      min="0"
+                      type="number"
+                      value={boxEditCount}
+                      onChange={(event) => setBoxEditCount(event.target.value)}
+                    />
+                    <button disabled={!boxEditCount} type="submit">
+                      save
+                    </button>
+                    <button
+                      aria-label="Cancel box edit"
+                      className="icon-button"
+                      onClick={() => {
+                        setEditingBoxType(null);
+                        setBoxEditCount("");
+                      }}
+                      type="button"
+                    />
+                  </form>
+                ) : (
+                  <>
+                    <div>
+                      <strong>{shippingBoxStock[boxType]} boxes</strong>
+                      <span>{boxType}</span>
+                    </div>
+                    <button
+                      className="mini-edit-pill material-edit-pill"
+                      onClick={() => openBoxEdit(boxType)}
+                      type="button"
+                    >
+                      edit
+                    </button>
+                  </>
+                )}
+              </article>
+            ))}
+            {customMaterials.map((material) => (
+              <article className="shipping-box-row" key={material.id}>
+                <div>
+                  <strong>
+                    {material.count} {material.type}
+                  </strong>
+                  <span>{material.specification}</span>
+                </div>
+              </article>
+            ))}
+            <button
+              className="mini-edit-pill box-add-pill"
+              onClick={() => setIsMaterialCreateOpen(true)}
+              type="button"
+            >
+              + material
+            </button>
+          </div>
           {isMaterialCreateOpen ? (
             <form className="custom-material-form" onSubmit={addCustomMaterial}>
               <label className="inventory-input">

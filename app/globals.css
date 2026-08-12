@@ -568,9 +568,12 @@ h2 {
 
 .clear-field-button {
   align-self: center;
-  height: 24px;
-  min-height: 24px;
-  padding: 3px 8px;
+  border-color: var(--line-soft);
+  color: var(--ink-muted);
+  font-size: 10px;
+  height: 20px;
+  min-height: 20px;
+  padding: 2px 6px;
 }
 
 .form-alert {
@@ -772,16 +775,16 @@ h2 {
   align-items: center;
   background: var(--surface-muted);
   border: 1px solid var(--line-soft);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--ink-muted);
   display: flex;
   font-size: 12px;
   justify-content: center;
   line-height: 1;
-  min-height: 0;
-  padding: 2px 7px;
+  min-height: 22px;
+  padding: 3px 9px;
   text-align: center;
-  width: 100%;
+  width: auto;
 }
 
 .shipping-box-list {
@@ -1721,9 +1724,31 @@ h2 {
 }
 
 .inventory-summary .material-stock-list {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   justify-self: stretch;
   min-width: 0;
   width: 100%;
+}
+
+.material-metrics {
+  align-items: start;
+  align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-column: 2 / -1;
+  justify-content: flex-end;
+}
+
+.material-box-grid {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
 .project-overview .eyebrow,

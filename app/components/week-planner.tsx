@@ -4453,11 +4453,13 @@ export function WeekPlanner() {
               </>
             )}
           </article>
-          <div className="inventory-metrics">
-            <span>planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg</span>
-            <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
-            <span>{reorderMessage}</span>
-          </div>
+          <span className="inventory-metric">
+            planned next 2 weeks {plannedPelletUsageKg.toFixed(1)} kg
+          </span>
+          <span className="inventory-metric">
+            projected next 2 weeks {projectedStockKg.toFixed(1)} kg
+          </span>
+          <span className="inventory-metric">{reorderMessage}</span>
           {shippingBoxTypes.map((boxType) => (
             <article className="shipping-box-row" key={boxType}>
               {editingBoxType === boxType ? (

@@ -648,7 +648,8 @@ h2 {
   gap: 8px;
 }
 
-.material-card-list {
+.material-card-list,
+.stock-list {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -700,14 +701,6 @@ h2 {
   cursor: default;
 }
 
-.inventory-metrics {
-  align-items: center;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: 100%;
-}
-
 .custom-material-form {
   align-items: end;
   display: grid;
@@ -757,7 +750,7 @@ h2 {
   padding: 6px 8px;
 }
 
-.inventory-metrics span {
+.inventory-metric {
   align-items: center;
   background: var(--surface-muted);
   border: 1px solid var(--line-soft);
@@ -1716,8 +1709,7 @@ h2 {
   margin-bottom: 4px;
 }
 
-.project-list,
-.material-card-list {
+.project-list {
   align-items: start;
   display: grid;
   gap: 8px;
@@ -1767,17 +1759,6 @@ h2 {
 .project-column-list {
   display: grid;
   gap: 8px;
-}
-
-.material-card-list {
-  align-items: start;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  width: 100%;
-}
-
-.material-card-list .inventory-metrics {
-  align-self: start;
-  grid-column: span 3;
 }
 
 .project-row,
@@ -2012,9 +1993,6 @@ h2 {
 }
 
 .stock-list {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   margin-top: 12px;
 }
 
@@ -2318,18 +2296,9 @@ h2 {
     width: 100%;
   }
 
-  .inventory-metrics {
-    justify-content: flex-start;
-  }
-
   .material-card-list,
   .custom-material-form {
     grid-template-columns: 1fr;
-  }
-
-  .material-card-list .inventory-metrics {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
   }
 
   .drawer-grid {

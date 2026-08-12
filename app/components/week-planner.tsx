@@ -33,9 +33,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const DAY_HOURS = 24;
 const WEEK_DAYS = 7;
-const SHIPPING_BUFFER_DAYS = 3;
-const PACKAGING_BUFFER_DAYS = 1;
-const DEADLINE_BUFFER_DAYS = SHIPPING_BUFFER_DAYS + PACKAGING_BUFFER_DAYS;
+const DEADLINE_WARNING_DAYS = 3;
 const BASE_WEEK_START = "2026-08-03T00:00:00";
 const MIN_WEEK_OFFSET = -52;
 const MAX_WEEK_OFFSET = 4;
@@ -520,30 +518,12 @@ function getEndDate(run: PrintRun, product: Product) {
   return addHours(asDate(run.startDateTime), product.printDurationHours);
 }
 
-function getLatestPrintCompletion(run: PrintRun) {
-  if (!run.customerDeadline || run.skipDeadlineBuffer) {
-    return null;
-  }
-
-  return addDays(asDate(run.customerDeadline), -DEADLINE_BUFFER_DAYS);
-}
-
-function getLatestSafeStart(run: PrintRun, product: Product) {
-  const latestPrintCompletion = getLatestPrintCompletion(run);
-
-  if (!latestPrintCompletion) {
-    return null;
-  }
-
-  return addHours(latestPrintCompletion, -product.printDurationHours);
-}
-
-function getCardDeadlineDate(run: PrintRun, product: Product) {
+function getCardDeadlineDate(run: PrintRun, _product: Product) {
   if (!run.customerDeadline) {
     return null;
   }
 
-  return getLatestSafeStart(run, product) ?? asDate(run.customerDeadline);
+  return asDate(run.customerDeadline);
 }
 
 function getStartOfWeek(date: Date) {
@@ -1198,7 +1178,6 @@ function getProgress(entry: ScheduledRun, now: Date) {
 }
 
 function buildRunTitle(entry: ScheduledRun) {
-  const latestSafeStart = getLatestSafeStart(entry.run, entry.product);
   const deadline = entry.run.customerDeadline ? asDate(entry.run.customerDeadline) : null;
   const starter = entry.run.assignee ? starterById.get(entry.run.assignee) : null;
 
@@ -1209,10 +1188,7 @@ function buildRunTitle(entry: ScheduledRun) {
     `start ${formatCompactDate(entry.start)} ${formatTime(entry.start)}`,
     `end ${formatCompactDate(entry.end)} ${formatTime(entry.end)}`,
     `duration ${formatHours(entry.product.printDurationHours)}`,
-    deadline ? `deadline ${formatCompactDate(deadline)} ${formatTime(deadline)}` : null,
-    latestSafeStart
-      ? `print deadline ${formatCompactDate(latestSafeStart)} ${formatTime(latestSafeStart)}`
-      : null
+    deadline ? `deadline ${formatCompactDate(deadline)} ${formatTime(deadline)}` : null
   ]
     .filter(Boolean)
     .join(" / ");
@@ -1259,6 +1235,13 @@ function getDeadlineWarning(run: PrintRun, product: Product, now: Date) {
 
   if (printEnd > deadline) {
     return "Print ends after deadline. Adjust the deadline.";
+  }
+
+  if (
+    !run.skipDeadlineBuffer &&
+    printEnd >= addDays(deadline, -DEADLINE_WARNING_DAYS)
+  ) {
+    return "Close to deadline. Keep at least 3 days buffer.";
   }
 
   return null;
@@ -2227,9 +2210,10 @@ export function WeekPlanner() {
 
     const editRun = buildCandidateRun(form, runId);
     const start = asDate(editRun.startDateTime);
+    const startChanged = editRun.startDateTime !== runToEdit.startDateTime;
     const printConflict = findPrintConflict(editRun, runs, productById);
 
-    if (start < now && !allowPast) {
+    if (startChanged && start < now && !allowPast) {
       setPendingPastAction({
         allowWeekend,
         form,
@@ -2556,7 +2540,11 @@ export function WeekPlanner() {
       return run.status === "failed" ? ["edit", "reschedule"] : ["edit"];
     }
 
-    if (run.status === "planned" || run.status === "reprint") {
+    if (
+      run.status === "planned" ||
+      run.status === "reprint" ||
+      run.status === "printing"
+    ) {
       return ["edit", ...actions];
     }
 
@@ -2607,8 +2595,8 @@ export function WeekPlanner() {
     }
   }
 
-  function canMoveRun(run: PrintRun) {
-    return run.status !== "printing";
+  function canMoveRun(_run: PrintRun) {
+    return true;
   }
 
   function moveRun(
@@ -3697,6 +3685,7 @@ export function WeekPlanner() {
                           const canEditMobile =
                             segment.run.status === "planned" ||
                             segment.run.status === "reprint" ||
+                            segment.run.status === "printing" ||
                             segment.run.status === "finished" ||
                             segment.run.status === "failed";
 

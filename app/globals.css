@@ -125,7 +125,7 @@ select:focus-visible {
   align-items: center;
   display: grid;
   gap: 16px;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr auto;
   margin-bottom: 28px;
   min-height: 48px;
 }
@@ -212,7 +212,7 @@ h2 {
 .topbar .primary-action {
   background: var(--ink);
   color: var(--surface);
-  grid-column: 3;
+  grid-column: 2;
   justify-self: end;
 }
 

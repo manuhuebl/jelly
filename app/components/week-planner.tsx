@@ -104,6 +104,7 @@ const initialTimelineEvents = [
 type ProductStyle = CSSProperties & {
   "--product-color": string;
   "--product-border": string;
+  "--project-color"?: string;
 };
 
 type SegmentStyle = ProductStyle & {
@@ -284,6 +285,7 @@ type NewPrintForm = {
   customerDeadline: string;
   date: string;
   printerId: PrinterId;
+  projectColor: string;
   productId: Product["id"];
   project: string;
   status: JobStatus;
@@ -325,6 +327,10 @@ function addHours(date: Date, hours: number) {
 
 function addDays(date: Date, days: number) {
   return new Date(date.getTime() + days * DAY_MS);
+}
+
+function addMonths(date: Date, months: number) {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
 }
 
 function getDayStart(date: Date) {
@@ -424,6 +430,50 @@ function getProductStyle(product: Product): ProductStyle {
   return {
     "--product-color": product.color,
     "--product-border": product.borderColor
+  };
+}
+
+const PROJECT_COLOR_PALETTE = [
+  "#dc8a3a",
+  "#8fa88d",
+  "#9a95d6",
+  "#e0a0c6",
+  "#d7ba67",
+  "#b2dcd6",
+  "#f09a70",
+  "#d2c5aa"
+];
+
+function getProjectKey(project: string) {
+  return project.trim().toLowerCase();
+}
+
+function getFallbackProjectColor(project: string) {
+  const key = getProjectKey(project);
+
+  if (!key) {
+    return "#d2c5aa";
+  }
+
+  const hash = [...key].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+
+  return PROJECT_COLOR_PALETTE[hash % PROJECT_COLOR_PALETTE.length];
+}
+
+function getProjectColor(project: string, projectColors: Record<string, string>) {
+  const key = getProjectKey(project);
+
+  return projectColors[key] ?? getFallbackProjectColor(project);
+}
+
+function getProductStyleWithProject(
+  product: Product,
+  project: string,
+  projectColors: Record<string, string>
+): ProductStyle {
+  return {
+    ...getProductStyle(product),
+    "--project-color": getProjectColor(project, projectColors)
   };
 }
 
@@ -831,11 +881,18 @@ function getProductInventory(
     }
   });
 
-  return getVisibleProducts(productList).map((product) => ({
-    ...product,
-    baseStockCount: manualStock[product.id] ?? 0,
-    stockCount: (manualStock[product.id] ?? 0) + (completedCounts.get(product.id) ?? 0)
-  }));
+  return getVisibleProducts(productList).map((product) => {
+    const hasManualStock = Object.prototype.hasOwnProperty.call(manualStock, product.id);
+    const stockCount = hasManualStock
+      ? manualStock[product.id]
+      : completedCounts.get(product.id) ?? 0;
+
+    return {
+      ...product,
+      baseStockCount: stockCount,
+      stockCount
+    };
+  });
 }
 
 function getProjectOverviewRows(
@@ -956,6 +1013,7 @@ function createDefaultPrintForm(weekStart: Date): NewPrintForm {
     customerDeadline: "",
     date: formatDateInput(addDays(weekStart, 2)),
     printerId: "printer-2",
+    projectColor: "#dc8a3a",
     productId: "len",
     project: "",
     status: "planned",
@@ -1028,6 +1086,7 @@ function buildEditForm(run: PrintRun): NewPrintForm {
     customerDeadline: run.customerDeadline ? formatDateTimeInputDate(run.customerDeadline) : "",
     date: formatDateTimeInputDate(run.startDateTime),
     printerId: run.printerId,
+    projectColor: getFallbackProjectColor(run.project),
     productId: run.productId,
     project: run.project,
     status: run.status,
@@ -1392,6 +1451,7 @@ export function WeekPlanner() {
   );
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [monthOffset, setMonthOffset] = useState(0);
   const [mobileWeekCount, setMobileWeekCount] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -1461,6 +1521,7 @@ export function WeekPlanner() {
   const [manualProjectStages, setManualProjectStages] = useState<
     Record<string, ProjectStage>
   >({});
+  const [projectColors, setProjectColors] = useState<Record<string, string>>({});
   const [editingInventoryProductId, setEditingInventoryProductId] = useState<string | null>(
     null
   );
@@ -1487,6 +1548,7 @@ export function WeekPlanner() {
   const skipNextSaveRef = useRef(true);
   const suppressClickRunId = useRef<string | null>(null);
   const weekStart = getWeekStart(baseWeekStart, weekOffset);
+  const monthStart = addMonths(baseWeekStart, monthOffset);
   const weekDays = getWeekDays(weekStart);
   const productById = useMemo(
     () => new Map(productData.map((product) => [product.id, product])),
@@ -1560,8 +1622,8 @@ export function WeekPlanner() {
     mobileWeekCount * WEEK_DAYS
   );
   const canLoadMoreMobileWeeks = mobileWeekCount < MAX_WEEK_OFFSET + 1;
-  const monthDays = getMonthDays(weekStart);
-  const monthLabel = weekStart.toLocaleDateString("en-GB", {
+  const monthDays = getMonthDays(monthStart);
+  const monthLabel = monthStart.toLocaleDateString("en-GB", {
     month: "long",
     year: "numeric"
   });
@@ -1605,6 +1667,7 @@ export function WeekPlanner() {
         setManualProjectStages(
           (loadedState.state.manualProjectStages ?? {}) as Record<string, ProjectStage>
         );
+        setProjectColors(loadedState.state.projectColors ?? {});
         setShippingBoxStock(normalizeShippingBoxStock(loadedState.state.shippingBoxStock));
         setManualProductInventory(loadedState.state.manualProductInventory);
       }
@@ -1641,6 +1704,7 @@ export function WeekPlanner() {
       manualProductInventory,
       manualProjectStages,
       productData,
+      projectColors,
       runs,
       shippingBoxStock,
       timelineEvents
@@ -1667,6 +1731,7 @@ export function WeekPlanner() {
     manualProductInventory,
     manualProjectStages,
     productData,
+    projectColors,
     runs,
     shippingBoxStock,
     timelineEvents
@@ -1690,6 +1755,7 @@ export function WeekPlanner() {
       manualProductInventory,
       manualProjectStages,
       productData,
+      projectColors,
       runs: nextRuns,
       shippingBoxStock,
       timelineEvents
@@ -1715,6 +1781,7 @@ export function WeekPlanner() {
         }
 
         setWeekOffset(0);
+        setMonthOffset(0);
         setMobileWeekCount(1);
         return nextBaseWeekStart;
       });
@@ -1771,6 +1838,10 @@ export function WeekPlanner() {
   function updateNewPrint(field: keyof NewPrintForm, value: string) {
     setNewPrint((current) => ({
       ...current,
+      projectColor:
+        field === "project"
+          ? projectColors[getProjectKey(value)] ?? current.projectColor
+          : current.projectColor,
       [field]: value
     }));
   }
@@ -1780,6 +1851,10 @@ export function WeekPlanner() {
       current
         ? {
             ...current,
+            projectColor:
+              field === "project"
+                ? projectColors[getProjectKey(value)] ?? current.projectColor
+                : current.projectColor,
             [field]: value
           }
         : current
@@ -1939,6 +2014,19 @@ export function WeekPlanner() {
     }));
   }
 
+  function saveProjectColor(form: NewPrintForm) {
+    const projectKey = getProjectKey(form.project);
+
+    if (!projectKey) {
+      return;
+    }
+
+    setProjectColors((current) => ({
+      ...current,
+      [projectKey]: form.projectColor || current[projectKey] || getFallbackProjectColor(form.project)
+    }));
+  }
+
   function updateProductData(
     productId: Product["id"],
     field: "name" | "pelletUsageKg" | "printDurationHours" | "shippingBoxType",
@@ -2067,6 +2155,7 @@ export function WeekPlanner() {
       return;
     }
 
+    saveProjectColor(form);
     setRuns((current) => [...current, run]);
     const deadlineWarning = getDeadlineWarning(run, selectedNewProduct, now);
 
@@ -2091,7 +2180,10 @@ export function WeekPlanner() {
 
   function openEditPanel(run: PrintRun) {
     setSelectedRunId(run.id);
-    setEditPrint(buildEditForm(run));
+    setEditPrint({
+      ...buildEditForm(run),
+      projectColor: getProjectColor(run.project, projectColors)
+    });
   }
 
   function openEventEditPanel(entry: TimelineEntry) {
@@ -2173,6 +2265,7 @@ export function WeekPlanner() {
       ...editRun
     };
 
+    saveProjectColor(form);
     setRuns((current) =>
       current.map((run) => (run.id === runId ? updatedRun : run))
     );
@@ -2440,6 +2533,7 @@ export function WeekPlanner() {
       customerDeadline: run.customerDeadline ? formatDateTimeInputDate(run.customerDeadline) : "",
       date: formatDateInput(nextWorkday),
       printerId: run.printerId,
+      projectColor: getProjectColor(run.project, projectColors),
       productId: run.productId,
       project: run.project,
       status: "reprint",
@@ -2585,7 +2679,10 @@ export function WeekPlanner() {
     setPendingUndoMove({ previousRun: run });
 
     if (selectedRunId === run.id) {
-      setEditPrint(buildEditForm(movedRun));
+      setEditPrint({
+        ...buildEditForm(movedRun),
+        projectColor: getProjectColor(movedRun.project, projectColors)
+      });
     }
 
     const movedProduct = productById.get(run.productId);
@@ -3205,7 +3302,12 @@ export function WeekPlanner() {
               className="new-print-preview"
               draggable
               onDragStart={handleNewPrintDragStart}
-              style={getPreviewStyle(selectedNewProduct)}
+              style={
+                {
+                  ...getPreviewStyle(selectedNewProduct),
+                  "--project-color": getProjectColor(newPrint.project, projectColors)
+                } as PreviewStyle
+              }
               title="Drag into calendar"
             >
               <div className="card-topline">
@@ -3257,6 +3359,15 @@ export function WeekPlanner() {
                 placeholder="project or customer"
                 value={newPrint.project}
                 onChange={(event) => updateNewPrint("project", event.target.value)}
+              />
+            </label>
+
+            <label>
+              <span>project color</span>
+              <input
+                type="color"
+                value={newPrint.projectColor}
+                onChange={(event) => updateNewPrint("projectColor", event.target.value)}
               />
             </label>
 
@@ -3379,6 +3490,15 @@ export function WeekPlanner() {
               <input
                 value={editPrint.project}
                 onChange={(event) => updateEditPrint("project", event.target.value)}
+              />
+            </label>
+
+            <label>
+              <span>project color</span>
+              <input
+                type="color"
+                value={editPrint.projectColor}
+                onChange={(event) => updateEditPrint("projectColor", event.target.value)}
               />
             </label>
 
@@ -3591,7 +3711,11 @@ export function WeekPlanner() {
                                 segment.run.status === "failed" ? "is-failed" : ""
                               }`}
                               key={`${segment.run.id}-${segment.dayIndex}`}
-                              style={getProductStyle(segment.product)}
+                              style={getProductStyleWithProject(
+                                segment.product,
+                                segment.run.project,
+                                projectColors
+                              )}
                             >
                               <span className="mobile-card-topline">
                                 <strong>{segment.product.name}</strong>
@@ -3737,6 +3861,10 @@ export function WeekPlanner() {
                           dragState?.runId === segment.run.id ? dragState : null;
                         const cardStyle: SegmentStyle = {
                           ...getSegmentStyle(segment),
+                          "--project-color": getProjectColor(
+                            segment.run.project,
+                            projectColors
+                          ),
                           "--drag-x": `${activeDrag?.deltaX ?? 0}px`,
                           "--drag-y": `${activeDrag?.deltaY ?? 0}px`
                         };
@@ -4120,8 +4248,19 @@ export function WeekPlanner() {
         ) : (
           <section className="month-view" aria-label="Monthly production overview">
             <div className="month-view-heading">
+              <button
+                aria-label="Previous month"
+                className="month-arrow is-left"
+                onClick={() => setMonthOffset((current) => current - 1)}
+                type="button"
+              />
               <h2>{monthLabel}</h2>
-              <span>drag prints between days</span>
+              <button
+                aria-label="Next month"
+                className="month-arrow is-right"
+                onClick={() => setMonthOffset((current) => current + 1)}
+                type="button"
+              />
             </div>
             <div className="month-weekdays" aria-hidden="true">
               {["mo", "tu", "we", "th", "fr", "sa", "su"].map((label) => (
@@ -4131,10 +4270,13 @@ export function WeekPlanner() {
             <div className="month-grid">
               {monthDays.map((day) => {
                 const dayRuns = getRunsForDay(day.date, runs, productById);
+                const isPastDay = day.date < getDayStart(now);
 
                 return (
                   <section
-                    className={`month-day ${day.isCurrentMonth ? "" : "is-outside"}`}
+                    className={`month-day ${day.isCurrentMonth ? "" : "is-outside"} ${
+                      isPastDay ? "is-past" : ""
+                    }`}
                     key={day.date.toISOString()}
                     onDragOver={handleMonthDayDragOver}
                     onDrop={(event) => handleMonthDayDrop(event, day.date)}
@@ -4145,12 +4287,20 @@ export function WeekPlanner() {
                         <article
                           className={`month-print-chip status-${entry.run.status} ${
                             entry.run.status === "failed" ? "is-failed" : ""
+                          } ${
+                            entry.end <= now || entry.run.status === "finished"
+                              ? "is-past"
+                              : ""
                           }`}
                           draggable={canMoveRun(entry.run)}
                           key={`${entry.run.id}-${day.date.toISOString()}`}
                           onDragEnd={handlePrintDragEnd}
                           onDragStart={(event) => handlePrintDragStart(event, entry.run)}
-                          style={getProductStyle(entry.product)}
+                          style={getProductStyleWithProject(
+                            entry.product,
+                            entry.run.project,
+                            projectColors
+                          )}
                           title={buildRunTitle(entry)}
                         >
                           <strong>{entry.product.name}</strong>
@@ -4198,6 +4348,11 @@ export function WeekPlanner() {
                       key={project.id}
                       onDragEnd={handlePrintDragEnd}
                       onDragStart={(event) => handleProjectDragStart(event, project.id)}
+                      style={
+                        {
+                          "--project-color": getProjectColor(project.project, projectColors)
+                        } as CSSProperties & { "--project-color": string }
+                      }
                     >
                       <button
                         className="project-summary"

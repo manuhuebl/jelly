@@ -12,6 +12,7 @@ export type StoredPlannerState = {
   manualProductInventory: Record<string, number>;
   manualProjectStages?: Record<string, string>;
   productData: Product[];
+  projectColors?: Record<string, string>;
   runs: PrintRun[];
   shippingBoxStock?: Record<string, number>;
   timelineEvents: Array<{

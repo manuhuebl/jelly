@@ -506,7 +506,7 @@ h2 {
 
 .new-print-preview {
   background: var(--product-color);
-  border: 0;
+  border: 2px solid var(--project-color, transparent);
   border-radius: 6px;
   color: var(--ink);
   cursor: grab;
@@ -816,7 +816,8 @@ h2 {
 
 .box-add-pill {
   align-self: end;
-  justify-self: start;
+  grid-column: 1 / -1;
+  justify-self: end;
 }
 
 .calendar-shell {
@@ -918,18 +919,36 @@ h2 {
 .month-view-heading {
   align-items: end;
   display: flex;
+  gap: 12px;
   justify-content: space-between;
 }
 
 .month-view-heading h2 {
+  flex: 1 1 auto;
   font-size: 28px;
   font-weight: 500;
   line-height: 1;
+  text-align: center;
 }
 
-.month-view-heading span {
-  color: var(--ink-muted);
-  font-size: 12px;
+.month-arrow {
+  background-color: transparent;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 18px auto;
+  border: 0;
+  cursor: pointer;
+  height: 30px;
+  padding: 0;
+  width: 34px;
+}
+
+.month-arrow.is-left {
+  background-image: url("/icons/pfeil-links.svg");
+}
+
+.month-arrow.is-right {
+  background-image: url("/icons/pfeil-rechts.svg");
 }
 
 .month-weekdays,
@@ -972,6 +991,10 @@ h2 {
   background: rgba(238, 241, 236, 0.52);
 }
 
+.month-day.is-past {
+  background: rgba(219, 222, 216, 0.72);
+}
+
 .month-day-label {
   color: var(--ink-muted);
   font-size: 11px;
@@ -985,6 +1008,7 @@ h2 {
 
 .month-print-chip {
   background: var(--product-color);
+  border: 2px solid var(--project-color, transparent);
   border-radius: 4px;
   color: var(--ink);
   cursor: grab;
@@ -997,6 +1021,11 @@ h2 {
 .month-print-chip.is-failed {
   background: var(--action-red);
   color: var(--surface);
+}
+
+.month-print-chip.is-past {
+  filter: grayscale(1) saturate(0);
+  opacity: 0.56;
 }
 
 .month-print-chip strong,
@@ -1120,7 +1149,7 @@ h2 {
 
 .print-card {
   background: var(--product-color);
-  border: 0;
+  border: 2px solid var(--project-color, transparent);
   border-radius: 6px;
   color: var(--ink);
   cursor: default;
@@ -1707,12 +1736,13 @@ h2 {
 
 .material-card-list {
   align-items: start;
-  grid-template-columns: 160px minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
 .material-card-list .inventory-metrics {
   align-self: start;
-  justify-content: flex-start;
+  grid-column: 2 / -1;
+  justify-content: flex-end;
 }
 
 .project-row,
@@ -1731,6 +1761,7 @@ h2 {
 
 .project-column .project-row {
   background: var(--surface);
+  border: 2px solid var(--project-color, transparent);
 }
 
 .project-summary {
@@ -2261,6 +2292,11 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .material-card-list .inventory-metrics {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
   .drawer-grid {
     grid-template-columns: 1fr;
   }
@@ -2530,7 +2566,7 @@ h2 {
 
   .mobile-print-card {
     background: var(--product-color);
-    border: 0;
+    border: 2px solid var(--project-color, transparent);
     border-radius: 6px;
     color: var(--ink);
     cursor: default;

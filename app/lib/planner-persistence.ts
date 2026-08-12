@@ -10,6 +10,7 @@ export type StoredPlannerState = {
   hiddenProjectIds?: string[];
   materialStockKg: number;
   manualProductInventory: Record<string, number>;
+  manualProjectStages?: Record<string, string>;
   productData: Product[];
   runs: PrintRun[];
   shippingBoxStock?: Record<string, number>;

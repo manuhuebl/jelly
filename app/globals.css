@@ -130,6 +130,33 @@ select:focus-visible {
   min-height: 48px;
 }
 
+.topbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.view-toggle {
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: flex;
+  overflow: hidden;
+}
+
+.view-toggle button {
+  background: var(--surface);
+  border: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.view-toggle button.is-active {
+  background: var(--ink);
+  color: var(--surface);
+}
+
 .brand-logo {
   display: block;
   height: 21px;
@@ -883,6 +910,113 @@ h2 {
   gap: 26px;
 }
 
+.month-view {
+  display: grid;
+  gap: 10px;
+}
+
+.month-view-heading {
+  align-items: end;
+  display: flex;
+  justify-content: space-between;
+}
+
+.month-view-heading h2 {
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.month-view-heading span {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.month-weekdays,
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.month-weekdays {
+  color: var(--ink-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.month-grid {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.month-day {
+  border-bottom: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+  display: grid;
+  gap: 6px;
+  min-height: 128px;
+  padding: 8px;
+}
+
+.month-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.month-day:nth-last-child(-n + 7) {
+  border-bottom: 0;
+}
+
+.month-day.is-outside {
+  background: rgba(238, 241, 236, 0.52);
+}
+
+.month-day-label {
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.month-day-runs {
+  align-content: start;
+  display: grid;
+  gap: 4px;
+}
+
+.month-print-chip {
+  background: var(--product-color);
+  border-radius: 4px;
+  color: var(--ink);
+  cursor: grab;
+  display: grid;
+  gap: 2px;
+  min-height: 42px;
+  padding: 6px;
+}
+
+.month-print-chip.is-failed {
+  background: var(--action-red);
+  color: var(--surface);
+}
+
+.month-print-chip strong,
+.month-print-chip span,
+.month-print-chip small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.month-print-chip strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.month-print-chip span,
+.month-print-chip small {
+  font-size: 10px;
+}
+
 .printer-title {
   align-items: start;
   display: flex;
@@ -1527,14 +1661,57 @@ h2 {
   width: 100%;
 }
 
+.project-kanban {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.project-column {
+  align-content: start;
+  background: var(--surface-muted);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  min-height: 170px;
+  padding: 8px;
+}
+
+.project-column-heading {
+  align-items: center;
+  color: var(--ink-muted);
+  display: flex;
+  font-size: 10px;
+  justify-content: space-between;
+  text-transform: uppercase;
+}
+
+.project-column-heading strong {
+  font-weight: 400;
+}
+
+.project-column-heading span {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  min-width: 22px;
+  padding: 3px 6px;
+  text-align: center;
+}
+
+.project-column-list {
+  display: grid;
+  gap: 8px;
+}
+
 .material-card-list {
   align-items: start;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: 160px minmax(0, 1fr);
 }
 
 .material-card-list .inventory-metrics {
   align-self: start;
-  grid-column: span 3;
   justify-content: flex-start;
 }
 
@@ -1550,6 +1727,10 @@ h2 {
   min-height: 74px;
   padding: 10px;
   position: relative;
+}
+
+.project-column .project-row {
+  background: var(--surface);
 }
 
 .project-summary {
@@ -2090,6 +2271,24 @@ h2 {
 
   .project-list {
     grid-template-columns: 1fr;
+  }
+
+  .project-kanban {
+    grid-template-columns: 1fr;
+  }
+
+  .month-grid,
+  .month-weekdays {
+    grid-template-columns: 1fr;
+  }
+
+  .month-weekdays {
+    display: none;
+  }
+
+  .month-day {
+    border-right: 0;
+    min-height: 110px;
   }
 
   .shipping-box-row,

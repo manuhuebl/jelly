@@ -42,6 +42,16 @@ const MAX_WEEK_OFFSET = 4;
 const HOURS = Array.from({ length: DAY_HOURS }, (_, hour) => hour);
 const HOUR_LINES = Array.from({ length: DAY_HOURS + 1 }, (_, hour) => hour);
 const DEFAULT_SHIPPING_BOX_TYPE: ShippingBoxType = "50x50x50";
+const PROJECT_STAGES: Array<{
+  id: ProjectStage;
+  label: string;
+}> = [
+  { id: "planned", label: "planned" },
+  { id: "printing", label: "printing" },
+  { id: "ready", label: "ready to pack" },
+  { id: "packed", label: "packed" },
+  { id: "shipped", label: "shipped" }
+];
 
 function getVisibleProducts(productList: Product[]) {
   return [...productList].sort((a, b) => {
@@ -144,6 +154,9 @@ type PendingUndoMove = {
   previousRun: PrintRun;
 };
 
+type ViewMode = "week" | "month";
+type ProjectStage = "planned" | "printing" | "ready" | "packed" | "shipped";
+
 type NativeDragPayload =
   | {
       grabOffsetX: number;
@@ -155,6 +168,10 @@ type NativeDragPayload =
       grabOffsetX: number;
       grabOffsetY: number;
       kind: "new-print";
+    }
+  | {
+      kind: "project";
+      projectId: string;
     };
 
 type PendingWeekendAction =
@@ -188,6 +205,21 @@ type PendingDelete =
       eventId: string;
       kind: "event";
       label: string;
+    };
+
+type PendingPastAction =
+  | {
+      allowWeekend: boolean;
+      form: NewPrintForm;
+      kind: "edit";
+      runId: string;
+    }
+  | {
+      allowWeekend: boolean;
+      kind: "move";
+      printerId: PrinterId;
+      run: PrintRun;
+      startDateTime: string;
     };
 
 type CustomMaterial = {
@@ -523,6 +555,23 @@ function getMobileDays(weekStart: Date, weekCount: number) {
   });
 }
 
+function getMonthDays(anchorDate: Date) {
+  const monthStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
+  const gridStart = getStartOfWeek(monthStart);
+  const lastDayOfMonth = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0);
+  const gridEnd = addDays(getStartOfWeek(addDays(lastDayOfMonth, 6)), WEEK_DAYS);
+  const dayCount = Math.round((gridEnd.getTime() - gridStart.getTime()) / DAY_MS);
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const date = addDays(gridStart, index);
+
+    return {
+      date,
+      isCurrentMonth: date.getMonth() === anchorDate.getMonth()
+    };
+  });
+}
+
 function getScheduledRuns(runs: PrintRun[], productMap: Map<string, Product>) {
   return runs
     .map((run) => {
@@ -691,6 +740,18 @@ function getWeekRuns(
   );
 }
 
+function getRunsForDay(
+  dayStart: Date,
+  runs: PrintRun[],
+  productMap: Map<string, Product>
+) {
+  const dayEnd = addDays(dayStart, 1);
+
+  return getScheduledRuns(runs, productMap)
+    .filter((entry) => entry.start < dayEnd && entry.end > dayStart)
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
 function getPlannedPelletUsageKg(
   runs: PrintRun[],
   from: Date,
@@ -850,6 +911,39 @@ function getProjectOverviewRows(
 
     return a.project.localeCompare(b.project);
   });
+}
+
+function getAutomaticProjectStage(project: ProjectOverviewRow): ProjectStage {
+  if (project.runs.some((entry) => entry.run.status === "printing")) {
+    return "printing";
+  }
+
+  if (
+    project.runs.length > 0 &&
+    project.runs.every((entry) => entry.run.status === "finished")
+  ) {
+    return "ready";
+  }
+
+  return "planned";
+}
+
+function getProjectStage(
+  project: ProjectOverviewRow,
+  manualStages: Record<string, ProjectStage>
+): ProjectStage {
+  const automaticStage = getAutomaticProjectStage(project);
+  const manualStage = manualStages[project.id];
+
+  if (automaticStage === "printing") {
+    return "printing";
+  }
+
+  if (manualStage === "packed" || manualStage === "shipped") {
+    return manualStage;
+  }
+
+  return automaticStage;
 }
 
 function buildStartDateTime(date: string, time: string) {
@@ -1297,6 +1391,7 @@ export function WeekPlanner() {
     getInitialWeekStart(new Date())
   );
   const [weekOffset, setWeekOffset] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [mobileWeekCount, setMobileWeekCount] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -1315,6 +1410,7 @@ export function WeekPlanner() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [pendingUndoMove, setPendingUndoMove] = useState<PendingUndoMove | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [pendingPastAction, setPendingPastAction] = useState<PendingPastAction | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [pendingWeekendAction, setPendingWeekendAction] =
     useState<PendingWeekendAction | null>(null);
@@ -1361,6 +1457,9 @@ export function WeekPlanner() {
   });
   const [manualProductInventory, setManualProductInventory] = useState<
     Record<string, number>
+  >({});
+  const [manualProjectStages, setManualProjectStages] = useState<
+    Record<string, ProjectStage>
   >({});
   const [editingInventoryProductId, setEditingInventoryProductId] = useState<string | null>(
     null
@@ -1461,8 +1560,22 @@ export function WeekPlanner() {
     mobileWeekCount * WEEK_DAYS
   );
   const canLoadMoreMobileWeeks = mobileWeekCount < MAX_WEEK_OFFSET + 1;
+  const monthDays = getMonthDays(weekStart);
+  const monthLabel = weekStart.toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric"
+  });
   const projectRows = getProjectOverviewRows(runs, timelineEvents, productById).filter(
     (project) => !hiddenProjectIds.has(project.id)
+  );
+  const projectRowsByStage = PROJECT_STAGES.reduce(
+    (groups, stage) => ({
+      ...groups,
+      [stage.id]: projectRows.filter(
+        (project) => getProjectStage(project, manualProjectStages) === stage.id
+      )
+    }),
+    {} as Record<ProjectStage, ProjectOverviewRow[]>
   );
   const pendingStartRun = pendingStartRunId
     ? runs.find((run) => run.id === pendingStartRunId)
@@ -1489,6 +1602,9 @@ export function WeekPlanner() {
         setCustomMaterials(loadedState.state.customMaterials ?? []);
         setHiddenProjectIds(new Set(loadedState.state.hiddenProjectIds ?? []));
         setMaterialStockKg(loadedState.state.materialStockKg);
+        setManualProjectStages(
+          (loadedState.state.manualProjectStages ?? {}) as Record<string, ProjectStage>
+        );
         setShippingBoxStock(normalizeShippingBoxStock(loadedState.state.shippingBoxStock));
         setManualProductInventory(loadedState.state.manualProductInventory);
       }
@@ -1523,6 +1639,7 @@ export function WeekPlanner() {
       hiddenProjectIds: [...hiddenProjectIds],
       materialStockKg,
       manualProductInventory,
+      manualProjectStages,
       productData,
       runs,
       shippingBoxStock,
@@ -1548,6 +1665,7 @@ export function WeekPlanner() {
     hiddenProjectIds,
     materialStockKg,
     manualProductInventory,
+    manualProjectStages,
     productData,
     runs,
     shippingBoxStock,
@@ -1566,8 +1684,11 @@ export function WeekPlanner() {
 
   function savePlannerSnapshot(nextRuns: PrintRun[]) {
     const state: StoredPlannerState = {
+      customMaterials,
+      hiddenProjectIds: [...hiddenProjectIds],
       materialStockKg,
       manualProductInventory,
+      manualProjectStages,
       productData,
       runs: nextRuns,
       shippingBoxStock,
@@ -2004,7 +2125,12 @@ export function WeekPlanner() {
     openEventEditPanel(entry);
   }
 
-  function commitEditPrint(runId: string, form: NewPrintForm, allowWeekend = false) {
+  function commitEditPrint(
+    runId: string,
+    form: NewPrintForm,
+    allowWeekend = false,
+    allowPast = false
+  ) {
     const runToEdit = runs.find((run) => run.id === runId);
 
     if (!runToEdit || !form.project.trim()) {
@@ -2015,10 +2141,12 @@ export function WeekPlanner() {
     const start = asDate(editRun.startDateTime);
     const printConflict = findPrintConflict(editRun, runs, productById);
 
-    if (start < now) {
-      setNotice({
-        title: "Past start blocked",
-        body: "Prints cannot be moved into the past."
+    if (start < now && !allowPast) {
+      setPendingPastAction({
+        allowWeekend,
+        form,
+        kind: "edit",
+        runId
       });
       return;
     }
@@ -2098,6 +2226,29 @@ export function WeekPlanner() {
     if (run) {
       moveRun(run, action.printerId, asDate(action.startDateTime), true);
     }
+  }
+
+  function confirmPastAction() {
+    const action = pendingPastAction;
+
+    if (!action) {
+      return;
+    }
+
+    setPendingPastAction(null);
+
+    if (action.kind === "edit") {
+      commitEditPrint(action.runId, action.form, action.allowWeekend, true);
+      return;
+    }
+
+    moveRun(
+      action.run,
+      action.printerId,
+      asDate(action.startDateTime),
+      action.allowWeekend,
+      true
+    );
   }
 
   function addTimelineEvent(event: FormEvent<HTMLFormElement>) {
@@ -2312,7 +2463,7 @@ export function WeekPlanner() {
 
   function getCardActions(run: PrintRun, actions: string[], isPast: boolean) {
     if (isPast) {
-      return run.status === "failed" ? ["reschedule"] : [];
+      return run.status === "failed" ? ["edit", "reschedule"] : ["edit"];
     }
 
     if (run.status === "planned" || run.status === "reprint") {
@@ -2367,16 +2518,16 @@ export function WeekPlanner() {
   }
 
   function canMoveRun(run: PrintRun) {
-    const product = productById.get(run.productId);
-
-    if (product && getEndDate(run, product) <= now) {
-      return false;
-    }
-
-    return run.status === "planned" || run.status === "reprint";
+    return run.status !== "printing";
   }
 
-  function moveRun(run: PrintRun, printerId: PrinterId, start: Date, allowWeekend = false) {
+  function moveRun(
+    run: PrintRun,
+    printerId: PrinterId,
+    start: Date,
+    allowWeekend = false,
+    allowPast = false
+  ) {
     if (!canMoveRun(run)) {
       setNotice({
         title: "Move blocked",
@@ -2385,10 +2536,16 @@ export function WeekPlanner() {
       return;
     }
 
-    if (start < now) {
-      setNotice({
-        title: "Past start blocked",
-        body: "Prints cannot be moved into the past."
+    const product = productById.get(run.productId);
+    const touchesPast = start < now || (product ? getEndDate(run, product) <= now : false);
+
+    if (touchesPast && !allowPast) {
+      setPendingPastAction({
+        allowWeekend,
+        kind: "move",
+        printerId,
+        run,
+        startDateTime: formatDateTimeValue(start)
       });
       return;
     }
@@ -2693,7 +2850,7 @@ export function WeekPlanner() {
   function handleBoardDrop(event: DragEvent<HTMLElement>) {
     const dragMeta = nativeDragRef.current;
 
-    if (!dragMeta) {
+    if (!dragMeta || dragMeta.kind === "project") {
       return;
     }
 
@@ -2754,6 +2911,82 @@ export function WeekPlanner() {
     moveRun(run, dropTarget.printerId, dropTarget.start);
   }
 
+  function handleMonthDayDragOver(event: DragEvent<HTMLElement>) {
+    if (nativeDragRef.current?.kind !== "run") {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }
+
+  function handleMonthDayDrop(event: DragEvent<HTMLElement>, day: Date) {
+    const dragMeta = nativeDragRef.current;
+
+    if (dragMeta?.kind !== "run") {
+      return;
+    }
+
+    event.preventDefault();
+    nativeDragRef.current = null;
+    setDragState(null);
+
+    const run = runs.find((entry) => entry.id === dragMeta.runId);
+
+    if (!run) {
+      return;
+    }
+
+    const previousStart = asDate(run.startDateTime);
+    const nextStart = new Date(day);
+
+    nextStart.setHours(previousStart.getHours(), previousStart.getMinutes(), 0, 0);
+    moveRun(run, run.printerId, nextStart);
+  }
+
+  function handleProjectDragStart(event: DragEvent<HTMLElement>, projectId: string) {
+    nativeDragRef.current = {
+      kind: "project",
+      projectId
+    };
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", `project:${projectId}`);
+  }
+
+  function handleProjectStageDragOver(event: DragEvent<HTMLElement>) {
+    if (nativeDragRef.current?.kind !== "project") {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }
+
+  function handleProjectStageDrop(event: DragEvent<HTMLElement>, stage: ProjectStage) {
+    const dragMeta = nativeDragRef.current;
+
+    if (dragMeta?.kind !== "project") {
+      return;
+    }
+
+    event.preventDefault();
+    nativeDragRef.current = null;
+
+    setManualProjectStages((current) => {
+      const next = {
+        ...current
+      };
+
+      if (stage === "planned" || stage === "printing" || stage === "ready") {
+        delete next[dragMeta.projectId];
+      } else {
+        next[dragMeta.projectId] = stage;
+      }
+
+      return next;
+    });
+  }
+
   if (!isPlannerLoaded) {
     return (
       <main className="app-shell loading-shell">
@@ -2778,9 +3011,27 @@ export function WeekPlanner() {
     <main className="app-shell">
       <header className="topbar">
         <img className="brand-logo" src="/logo/logo.png" alt="jelly" />
-        <button className="primary-action" onClick={openNewPrintForm} type="button">
-          + print
-        </button>
+        <div className="topbar-actions">
+          <div className="view-toggle" aria-label="Calendar view">
+            <button
+              className={viewMode === "week" ? "is-active" : ""}
+              onClick={() => setViewMode("week")}
+              type="button"
+            >
+              week
+            </button>
+            <button
+              className={viewMode === "month" ? "is-active" : ""}
+              onClick={() => setViewMode("month")}
+              type="button"
+            >
+              month
+            </button>
+          </div>
+          <button className="primary-action" onClick={openNewPrintForm} type="button">
+            + print
+          </button>
+        </div>
       </header>
 
       {isMaterialCritical && showMaterialPopup ? (
@@ -2913,6 +3164,26 @@ export function WeekPlanner() {
             aria-label="Cancel project removal"
             className="icon-button popup-close"
             onClick={() => setPendingProjectRemoval(null)}
+            type="button"
+          />
+        </aside>
+      ) : null}
+
+      {pendingPastAction ? (
+        <aside className="delete-popup is-neutral" aria-label="Confirm past change">
+          <div>
+            <strong>change past print?</strong>
+            <span>
+              This changes an old print. Inventory and project status may update.
+            </span>
+          </div>
+          <button onClick={confirmPastAction} type="button">
+            Confirm
+          </button>
+          <button
+            aria-label="Cancel past change"
+            className="icon-button popup-close"
+            onClick={() => setPendingPastAction(null)}
             type="button"
           />
         </aside>
@@ -3192,6 +3463,8 @@ export function WeekPlanner() {
       ) : null}
 
       <section className="calendar-shell" aria-label="Production calendar">
+        {viewMode === "week" ? (
+          <>
         <div className="calendar-week-header" aria-label="Week navigation">
           <div className="calendar-time-spacer" />
           <div className="week-days-wrap">
@@ -3305,9 +3578,10 @@ export function WeekPlanner() {
 
                           const segmentLabel = getSegmentLabel(segment, now);
                           const canEditMobile =
-                            !isPast &&
-                            (segment.run.status === "planned" ||
-                              segment.run.status === "reprint");
+                            segment.run.status === "planned" ||
+                            segment.run.status === "reprint" ||
+                            segment.run.status === "finished" ||
+                            segment.run.status === "failed";
 
                           return (
                             <article
@@ -3842,82 +4116,148 @@ export function WeekPlanner() {
             </div>
           </div>
         </section>
+          </>
+        ) : (
+          <section className="month-view" aria-label="Monthly production overview">
+            <div className="month-view-heading">
+              <h2>{monthLabel}</h2>
+              <span>drag prints between days</span>
+            </div>
+            <div className="month-weekdays" aria-hidden="true">
+              {["mo", "tu", "we", "th", "fr", "sa", "su"].map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            <div className="month-grid">
+              {monthDays.map((day) => {
+                const dayRuns = getRunsForDay(day.date, runs, productById);
+
+                return (
+                  <section
+                    className={`month-day ${day.isCurrentMonth ? "" : "is-outside"}`}
+                    key={day.date.toISOString()}
+                    onDragOver={handleMonthDayDragOver}
+                    onDrop={(event) => handleMonthDayDrop(event, day.date)}
+                  >
+                    <span className="month-day-label">{formatCompactDate(day.date)}</span>
+                    <div className="month-day-runs">
+                      {dayRuns.map((entry) => (
+                        <article
+                          className={`month-print-chip status-${entry.run.status} ${
+                            entry.run.status === "failed" ? "is-failed" : ""
+                          }`}
+                          draggable={canMoveRun(entry.run)}
+                          key={`${entry.run.id}-${day.date.toISOString()}`}
+                          onDragEnd={handlePrintDragEnd}
+                          onDragStart={(event) => handlePrintDragStart(event, entry.run)}
+                          style={getProductStyle(entry.product)}
+                          title={buildRunTitle(entry)}
+                        >
+                          <strong>{entry.product.name}</strong>
+                          <span>{entry.run.project}</span>
+                          <small>
+                            {formatPrinterName(
+                              printers.find((printer) => printer.id === entry.run.printerId) ??
+                                printers[0]
+                            )}
+                          </small>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </section>
 
       <section className="project-overview" aria-label="Project overview">
         <p className="eyebrow">Project overview</p>
 
-        <div className="project-list">
-          {projectRows.map((project) => {
-            const isExpanded = expandedProjectIds.has(project.id);
+        <div className="project-kanban">
+          {PROJECT_STAGES.map((stage) => (
+            <section
+              className="project-column"
+              key={stage.id}
+              onDragOver={handleProjectStageDragOver}
+              onDrop={(event) => handleProjectStageDrop(event, stage.id)}
+            >
+              <div className="project-column-heading">
+                <strong>{stage.label}</strong>
+                <span>{projectRowsByStage[stage.id].length}</span>
+              </div>
+              <div className="project-column-list">
+                {projectRowsByStage[stage.id].map((project) => {
+                  const isExpanded = expandedProjectIds.has(project.id);
 
-            return (
-              <article className="project-row" key={project.id}>
-                <button
-                  className="project-summary"
-                  onClick={() => toggleProject(project.id)}
-                  type="button"
-                >
-                  <span className="project-card-main">
-                    <strong>{project.project}</strong>
-                    <span className="project-meta">
-                      <em>{project.runs.length}</em>
-                      {project.deadline ? (
-                        <small>by {formatCompactDate(project.deadline)}</small>
-                      ) : null}
-                    </span>
-                  </span>
-                  <span
-                    className={`project-arrow ${isExpanded ? "is-open" : ""}`}
-                    aria-hidden="true"
-                  />
-                </button>
-                {isExpanded ? (
-                  <div className="project-details">
-                    {project.runs.length === 0 ? (
-                      <span>no prints yet</span>
-                    ) : (
-                      project.runs.map((entry) => (
-                        <span
-                          className={`project-detail-row ${
-                            entry.run.status === "finished" ? "is-done" : ""
-                          }`}
-                          key={entry.run.id}
-                        >
-                          <span className="project-detail-copy">
-                            <strong>{entry.product.name}</strong>
-                            <small>
-                              {formatCompactDate(entry.start)} {formatTime(entry.start)}-
-                              {formatTime(entry.end)}
-                            </small>
+                  return (
+                    <article
+                      className="project-row"
+                      draggable
+                      key={project.id}
+                      onDragEnd={handlePrintDragEnd}
+                      onDragStart={(event) => handleProjectDragStart(event, project.id)}
+                    >
+                      <button
+                        className="project-summary"
+                        onClick={() => toggleProject(project.id)}
+                        type="button"
+                      >
+                        <span className="project-card-main">
+                          <strong>{project.project}</strong>
+                          <span className="project-meta">
+                            <em>{project.runs.length}</em>
+                            {project.deadline ? (
+                              <small>by {formatCompactDate(project.deadline)}</small>
+                            ) : null}
                           </span>
-                          {entry.run.status === "finished" ? <em>done</em> : null}
                         </span>
-                      ))
-                    )}
-                    {project.runs.length > 0 ? (
-                      <div className="project-detail-actions">
-                        <button
-                          className="mini-edit-pill project-shipped-button"
-                          onClick={() => requestProjectRemoval(project)}
-                          type="button"
-                        >
-                          shipped
-                        </button>
-                        <button
-                          className="mini-edit-pill project-remove-button"
-                          onClick={() => requestProjectRemoval(project)}
-                          type="button"
-                        >
-                          remove
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
+                        <span
+                          className={`project-arrow ${isExpanded ? "is-open" : ""}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                      {isExpanded ? (
+                        <div className="project-details">
+                          {project.runs.length === 0 ? (
+                            <span>no prints yet</span>
+                          ) : (
+                            project.runs.map((entry) => (
+                              <span
+                                className={`project-detail-row ${
+                                  entry.run.status === "finished" ? "is-done" : ""
+                                }`}
+                                key={entry.run.id}
+                              >
+                                <span className="project-detail-copy">
+                                  <strong>{entry.product.name}</strong>
+                                  <small>
+                                    {formatCompactDate(entry.start)} {formatTime(entry.start)}-
+                                    {formatTime(entry.end)}
+                                  </small>
+                                </span>
+                                {entry.run.status === "finished" ? <em>done</em> : null}
+                              </span>
+                            ))
+                          )}
+                          <div className="project-detail-actions">
+                            <button
+                              className="mini-edit-pill project-remove-button"
+                              onClick={() => requestProjectRemoval(project)}
+                              type="button"
+                            >
+                              archive
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       </section>
 

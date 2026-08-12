@@ -630,7 +630,7 @@ h2 {
   display: block;
   gap: 12px;
   margin-top: 34px;
-  padding: 12px 12px 44px;
+  padding: 12px;
   position: relative;
 }
 
@@ -759,8 +759,8 @@ h2 {
   font-size: 12px;
   justify-content: center;
   line-height: 1;
-  min-height: 22px;
-  padding: 3px 8px;
+  min-height: 0;
+  padding: 2px 7px;
   text-align: center;
   width: 100%;
 }
@@ -820,10 +820,8 @@ h2 {
 
 .box-add-pill {
   align-self: end;
-  bottom: 12px;
-  justify-self: auto;
-  position: absolute;
-  right: 12px;
+  justify-self: end;
+  position: static;
 }
 
 .calendar-shell {
@@ -1700,7 +1698,6 @@ h2 {
 .inventory-summary {
   display: block;
   margin-top: 12px;
-  padding-bottom: 44px;
   position: relative;
 }
 

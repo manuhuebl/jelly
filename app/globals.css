@@ -2296,9 +2296,12 @@ h2 {
     width: 100%;
   }
 
-  .material-card-list,
   .custom-material-form {
     grid-template-columns: 1fr;
+  }
+
+  .material-card-list {
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   }
 
   .drawer-grid {
@@ -2661,6 +2664,7 @@ h2 {
     font-size: 8px;
   }
 
+  .material-card-list,
   .stock-list,
   .product-list {
     grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));

@@ -133,12 +133,15 @@ select:focus-visible {
 .topbar-actions {
   align-items: center;
   display: flex;
-  gap: 10px;
+  gap: 22px;
 }
 
 .view-toggle {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
   display: flex;
-  gap: 10px;
+  gap: 0;
+  padding: 2px;
 }
 
 .view-toggle button {
@@ -147,13 +150,14 @@ select:focus-visible {
   color: var(--ink-muted);
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
-  min-height: 0;
-  padding: 0;
+  font-size: 12px;
+  min-height: 28px;
+  padding: 5px 12px;
 }
 
 .view-toggle button.is-active {
-  background: transparent;
+  background: var(--surface-muted);
+  border-radius: 999px;
   color: var(--ink);
 }
 
@@ -646,7 +650,7 @@ h2 {
 
 .material-card-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
 .material-card,
@@ -696,11 +700,10 @@ h2 {
 
 .inventory-metrics {
   align-items: center;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
-  justify-content: flex-end;
-  margin-left: auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
 }
 
 .custom-material-form {
@@ -753,19 +756,24 @@ h2 {
 }
 
 .inventory-metrics span {
+  align-items: center;
   background: var(--surface-muted);
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   color: var(--ink-muted);
+  display: flex;
   font-size: 12px;
+  justify-content: center;
   min-height: 28px;
   padding: 6px 9px;
+  text-align: center;
+  width: 100%;
 }
 
 .shipping-box-list {
   align-items: start;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   width: 100%;
 }
@@ -916,7 +924,7 @@ h2 {
 
 .month-view {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .month-view-heading {
@@ -924,6 +932,7 @@ h2 {
   display: flex;
   gap: 12px;
   justify-content: space-between;
+  min-height: 30px;
 }
 
 .month-view-heading h2 {
@@ -961,6 +970,7 @@ h2 {
 }
 
 .month-weekdays {
+  display: none;
   color: var(--ink-muted);
   font-size: 11px;
   text-transform: none;
@@ -1757,14 +1767,13 @@ h2 {
 
 .material-card-list {
   align-items: start;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   width: 100%;
 }
 
 .material-card-list .inventory-metrics {
   align-self: start;
-  grid-column: 2 / -1;
-  justify-content: flex-end;
+  grid-column: span 3;
 }
 
 .project-row,

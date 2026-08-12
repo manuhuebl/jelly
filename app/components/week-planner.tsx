@@ -1623,9 +1623,6 @@ export function WeekPlanner() {
   );
   const canLoadMoreMobileWeeks = mobileWeekCount < MAX_WEEK_OFFSET + 1;
   const monthDays = getMonthDays(monthStart);
-  const monthLabel = monthStart.toLocaleDateString("en-GB", {
-    month: "long"
-  });
   const projectRows = getProjectOverviewRows(runs, timelineEvents, productById).filter(
     (project) => !hiddenProjectIds.has(project.id)
   );
@@ -4253,18 +4250,12 @@ export function WeekPlanner() {
                 onClick={() => setMonthOffset((current) => current - 1)}
                 type="button"
               />
-              <h2>{monthLabel}</h2>
               <button
                 aria-label="Next month"
                 className="month-arrow is-right"
                 onClick={() => setMonthOffset((current) => current + 1)}
                 type="button"
               />
-            </div>
-            <div className="month-weekdays" aria-hidden="true">
-              {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((label) => (
-                <span key={label}>{label}</span>
-              ))}
             </div>
             <div className="month-grid">
               {monthDays.map((day) => {

@@ -1085,6 +1085,21 @@ function buildEventForm(event: TimelineEvent): NewEventForm {
   };
 }
 
+function buildEventDateRange(form: NewEventForm) {
+  const startDate = form.startDate || formatDateInput(new Date());
+  const endDate = form.endDate || startDate;
+  const start = asDate(buildStartDateTime(startDate, "00:00"));
+  const end =
+    asDate(buildStartDateTime(endDate, "23:59")) < start
+      ? asDate(buildStartDateTime(startDate, "23:59"))
+      : asDate(buildStartDateTime(endDate, "23:59"));
+
+  return {
+    endDateTime: formatDateTimeValue(end),
+    startDateTime: formatDateTimeValue(start)
+  };
+}
+
 function getNextWorkday(date: Date) {
   let next = addDays(date, 1);
 
@@ -2364,13 +2379,15 @@ export function WeekPlanner() {
       return;
     }
 
+    const eventRange = buildEventDateRange(newEvent);
+
     setTimelineEvents((current) => [
       ...current,
       {
         color: newEvent.type === "custom" ? newEvent.customColor : undefined,
-        endDateTime: buildStartDateTime(newEvent.endDate, "23:59"),
+        endDateTime: eventRange.endDateTime,
         id: `event-${Date.now()}`,
-        startDateTime: buildStartDateTime(newEvent.startDate, "00:00"),
+        startDateTime: eventRange.startDateTime,
         tagLabel:
           newEvent.type === "custom" ? newEvent.customLabel.trim() || "custom" : undefined,
         title: newEvent.title.trim(),
@@ -2392,14 +2409,16 @@ export function WeekPlanner() {
       return;
     }
 
+    const eventRange = buildEventDateRange(editEvent);
+
     setTimelineEvents((current) =>
       current.map((timelineEvent) =>
         timelineEvent.id === selectedEvent.id
           ? {
               ...timelineEvent,
               color: editEvent.type === "custom" ? editEvent.customColor : undefined,
-              endDateTime: buildStartDateTime(editEvent.endDate, "23:59"),
-              startDateTime: buildStartDateTime(editEvent.startDate, "00:00"),
+              endDateTime: eventRange.endDateTime,
+              startDateTime: eventRange.startDateTime,
               tagLabel:
                 editEvent.type === "custom"
                   ? editEvent.customLabel.trim() || "custom"
@@ -3437,7 +3456,7 @@ export function WeekPlanner() {
             </label>
 
             <label>
-              <span>deadline</span>
+              <span>deadline optional</span>
               <input
                 type="date"
                 value={newPrint.customerDeadline}
@@ -3568,7 +3587,7 @@ export function WeekPlanner() {
             </label>
 
             <label>
-              <span>deadline</span>
+              <span>deadline optional</span>
               <input
                 type="date"
                 value={editPrint.customerDeadline}
@@ -4215,7 +4234,19 @@ export function WeekPlanner() {
                 setEditEvent(null);
                 setSelectedDeadline(null);
                 setEditDeadlineDate("");
-                setIsEventOpen((current) => !current);
+                setIsEventOpen((current) => {
+                  const nextIsOpen = !current;
+
+                  if (nextIsOpen) {
+                    setNewEvent((event) => ({
+                      ...event,
+                      endDate: formatDateInput(addDays(weekStart, 6)),
+                      startDate: formatDateInput(weekStart)
+                    }));
+                  }
+
+                  return nextIsOpen;
+                });
               }}
               type="button"
             >

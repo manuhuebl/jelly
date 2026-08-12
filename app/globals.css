@@ -648,7 +648,6 @@ h2 {
   gap: 8px;
 }
 
-.material-card-list,
 .stock-list {
   display: grid;
   gap: 8px;
@@ -2300,10 +2299,6 @@ h2 {
     grid-template-columns: 1fr;
   }
 
-  .material-card-list {
-    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-  }
-
   .drawer-grid {
     grid-template-columns: 1fr;
   }
@@ -2664,7 +2659,6 @@ h2 {
     font-size: 8px;
   }
 
-  .material-card-list,
   .stock-list,
   .product-list {
     grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));

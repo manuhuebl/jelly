@@ -4412,7 +4412,7 @@ export function WeekPlanner() {
             <p className="eyebrow">Material inventory</p>
           </div>
         </div>
-        <div className="material-card-list">
+        <div className="stock-list material-stock-list">
           <article className="material-card">
             {isMaterialEditOpen ? (
               <form className="material-stock-edit" onSubmit={saveMaterialStock}>

@@ -554,6 +554,25 @@ h2 {
   padding: 7px 9px;
 }
 
+.clearable-field {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.clearable-field input {
+  min-width: 0;
+  width: 100%;
+}
+
+.clear-field-button {
+  align-self: center;
+  height: 24px;
+  min-height: 24px;
+  padding: 3px 8px;
+}
+
 .form-alert {
   background: var(--action-red);
   border: 1px solid var(--action-red-border);

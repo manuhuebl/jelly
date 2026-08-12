@@ -3474,11 +3474,22 @@ export function WeekPlanner() {
 
             <label>
               <span>deadline optional</span>
-              <input
-                type="date"
-                value={newPrint.customerDeadline}
-                onChange={(event) => updateNewPrint("customerDeadline", event.target.value)}
-              />
+              <div className="clearable-field">
+                <input
+                  type="date"
+                  value={newPrint.customerDeadline}
+                  onChange={(event) => updateNewPrint("customerDeadline", event.target.value)}
+                />
+                {newPrint.customerDeadline ? (
+                  <button
+                    className="mini-edit-pill clear-field-button"
+                    onClick={() => updateNewPrint("customerDeadline", "")}
+                    type="button"
+                  >
+                    clear
+                  </button>
+                ) : null}
+              </div>
             </label>
 
             <button disabled={!canAddPrint} type="submit">
@@ -3605,11 +3616,22 @@ export function WeekPlanner() {
 
             <label>
               <span>deadline optional</span>
-              <input
-                type="date"
-                value={editPrint.customerDeadline}
-                onChange={(event) => updateEditPrint("customerDeadline", event.target.value)}
-              />
+              <div className="clearable-field">
+                <input
+                  type="date"
+                  value={editPrint.customerDeadline}
+                  onChange={(event) => updateEditPrint("customerDeadline", event.target.value)}
+                />
+                {editPrint.customerDeadline ? (
+                  <button
+                    className="mini-edit-pill clear-field-button"
+                    onClick={() => updateEditPrint("customerDeadline", "")}
+                    type="button"
+                  >
+                    clear
+                  </button>
+                ) : null}
+              </div>
             </label>
 
             <button disabled={!canSaveEdit} type="submit">

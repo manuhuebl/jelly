@@ -1263,12 +1263,31 @@ function getTimeRangeLabel(entry: ScheduledRun) {
   )} ${formatTime(entry.end)}`;
 }
 
-function getProjectLabel(run: PrintRun) {
-  return [run.project, run.sequence].filter(Boolean).join(" · ");
+function getProjectTotalLabel(
+  run: PrintRun,
+  projectRunTotals: Record<string, number>
+) {
+  const total = projectRunTotals[getProjectKey(run.project)] ?? 1;
+
+  return total > 1 ? `${total} total` : null;
 }
 
-function getCompactProjectLabel(run: PrintRun) {
-  return [run.project, run.sequence].filter(Boolean).join(" ");
+function getProjectLabel(
+  run: PrintRun,
+  projectRunTotals: Record<string, number>
+) {
+  return [run.project, getProjectTotalLabel(run, projectRunTotals)]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function getCompactProjectLabel(
+  run: PrintRun,
+  projectRunTotals: Record<string, number>
+) {
+  return [run.project, getProjectTotalLabel(run, projectRunTotals)]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function canShowCompactProject(segment: CalendarSegment) {
@@ -1536,6 +1555,20 @@ export function WeekPlanner() {
   const productById = useMemo(
     () => new Map(productData.map((product) => [product.id, product])),
     [productData]
+  );
+  const projectRunTotals = useMemo(
+    () =>
+      runs.reduce<Record<string, number>>((totals, run) => {
+        const projectKey = getProjectKey(run.project);
+
+        if (!projectKey) {
+          return totals;
+        }
+
+        totals[projectKey] = (totals[projectKey] ?? 0) + 1;
+        return totals;
+      }, {}),
+    [runs]
   );
   const visibleProducts = useMemo(() => getVisibleProducts(productData), [productData]);
   const plannedPelletUsageKg = getPlannedPelletUsageKg(runs, now, 14, productById);
@@ -3720,7 +3753,7 @@ export function WeekPlanner() {
                                   ) : null}
                                 </span>
                               </span>
-                              <span>{getProjectLabel(segment.run)}</span>
+                              <span>{getProjectLabel(segment.run, projectRunTotals)}</span>
                               <span>{getTimeRangeLabel(segment)}</span>
                               {shouldShowStatusPill(segmentLabel) || progress !== null ? (
                                 <span className="mobile-card-status">
@@ -3946,10 +3979,10 @@ export function WeekPlanner() {
                                   </button>
                                 ) : null}
                               </div>
-                              <span>{getProjectLabel(segment.run)}</span>
+                              <span>{getProjectLabel(segment.run, projectRunTotals)}</span>
                               {showCompactProject ? (
                                 <span className="compact-project-label">
-                                  {getCompactProjectLabel(segment.run)}
+                                  {getCompactProjectLabel(segment.run, projectRunTotals)}
                                 </span>
                               ) : null}
                             </div>
@@ -4263,34 +4296,44 @@ export function WeekPlanner() {
                   >
                     <span className="month-day-label">{formatCompactDate(day.date)}</span>
                     <div className="month-day-runs">
-                      {dayRuns.map((entry) => (
-                        <article
-                          className={`month-print-chip status-${entry.run.status} ${
-                            entry.run.status === "failed" ? "is-failed" : ""
-                          } ${
-                            entry.end <= now || entry.run.status === "finished"
-                              ? "is-past"
-                              : ""
-                          }`}
-                          draggable={canMoveRun(entry.run)}
-                          key={`${entry.run.id}-${day.date.toISOString()}`}
-                          onDragEnd={handlePrintDragEnd}
-                          onDragStart={(event) => handlePrintDragStart(event, entry.run)}
-                          style={getProductStyleWithProject(
-                            entry.product,
-                            entry.run.project,
-                            projectColors
-                          )}
-                          title={buildRunTitle(entry)}
-                        >
-                          <strong>{entry.product.name}</strong>
-                          <span>{entry.run.project}</span>
-                          <small className="month-printer-pill">
-                            {printers.find((printer) => printer.id === entry.run.printerId)
-                              ?.name ?? "1"}
-                          </small>
-                        </article>
-                      ))}
+                      {dayRuns.map((entry) => {
+                        const monthDeadline = getCardDeadlineDate(
+                          entry.run,
+                          entry.product
+                        );
+
+                        return (
+                          <article
+                            className={`month-print-chip status-${entry.run.status} ${
+                              entry.run.status === "failed" ? "is-failed" : ""
+                            } ${
+                              entry.end <= now || entry.run.status === "finished"
+                                ? "is-past"
+                                : ""
+                            }`}
+                            draggable={canMoveRun(entry.run)}
+                            key={`${entry.run.id}-${day.date.toISOString()}`}
+                            onDragEnd={handlePrintDragEnd}
+                            onDragStart={(event) => handlePrintDragStart(event, entry.run)}
+                            style={getProductStyleWithProject(
+                              entry.product,
+                              entry.run.project,
+                              projectColors
+                            )}
+                            title={buildRunTitle(entry)}
+                          >
+                            <strong>{entry.product.name}</strong>
+                            <span>{entry.run.project}</span>
+                            {monthDeadline ? (
+                              <small>by {formatCompactDate(monthDeadline)}</small>
+                            ) : null}
+                            <small className="month-printer-pill">
+                              {printers.find((printer) => printer.id === entry.run.printerId)
+                                ?.name ?? "1"}
+                            </small>
+                          </article>
+                        );
+                      })}
                     </div>
                   </section>
                 );

@@ -3100,31 +3100,33 @@ export function WeekPlanner() {
     );
   }
 
+  const viewToggle = (
+    <div className="view-toggle" aria-label="Calendar view">
+      <button
+        className={viewMode === "week" ? "is-active" : ""}
+        onClick={() => setViewMode("week")}
+        type="button"
+      >
+        week
+      </button>
+      <button
+        className={viewMode === "month" ? "is-active" : ""}
+        onClick={() => setViewMode("month")}
+        type="button"
+      >
+        month
+      </button>
+    </div>
+  );
+
   return (
     <main className="app-shell">
       <header className="topbar">
+        {viewToggle}
         <img className="brand-logo" src="/logo/logo.png" alt="jelly" />
-        <div className="topbar-actions">
-          <div className="view-toggle" aria-label="Calendar view">
-            <button
-              className={viewMode === "week" ? "is-active" : ""}
-              onClick={() => setViewMode("week")}
-              type="button"
-            >
-              week
-            </button>
-            <button
-              className={viewMode === "month" ? "is-active" : ""}
-              onClick={() => setViewMode("month")}
-              type="button"
-            >
-              month
-            </button>
-          </div>
-          <button className="primary-action" onClick={openNewPrintForm} type="button">
-            + print
-          </button>
-        </div>
+        <button className="primary-action" onClick={openNewPrintForm} type="button">
+          + print
+        </button>
       </header>
 
       {isMaterialCritical && showMaterialPopup ? (
@@ -4456,8 +4458,6 @@ export function WeekPlanner() {
             <span>projected next 2 weeks {projectedStockKg.toFixed(1)} kg</span>
             <span>{reorderMessage}</span>
           </div>
-        </div>
-        <div className="shipping-box-list">
           {shippingBoxTypes.map((boxType) => (
             <article className="shipping-box-row" key={boxType}>
               {editingBoxType === boxType ? (

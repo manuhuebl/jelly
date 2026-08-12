@@ -627,7 +627,7 @@ h2 {
 
 .inventory-summary {
   align-items: stretch;
-  display: grid;
+  display: block;
   gap: 12px;
   margin-top: 34px;
   padding: 12px 12px 44px;
@@ -1697,9 +1697,16 @@ h2 {
 }
 
 .inventory-summary {
+  display: block;
   margin-top: 12px;
   padding-bottom: 44px;
   position: relative;
+}
+
+.inventory-summary .material-stock-list {
+  justify-self: stretch;
+  min-width: 0;
+  width: 100%;
 }
 
 .project-overview .eyebrow,
@@ -2262,8 +2269,7 @@ h2 {
   }
 
   .inventory-summary {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: stretch;
   }
 
   h1 {

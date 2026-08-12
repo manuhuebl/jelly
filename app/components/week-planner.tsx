@@ -3191,6 +3191,7 @@ export function WeekPlanner() {
   return (
     <main className="app-shell">
       <header className="topbar">
+        <img className="brand-logo" src="/logo/logo.png" alt="jelly" />
         {viewToggle}
         <button className="primary-action" onClick={openNewPrintForm} type="button">
           + print

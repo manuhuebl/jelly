@@ -137,24 +137,24 @@ select:focus-visible {
 }
 
 .view-toggle {
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
   display: flex;
-  overflow: hidden;
+  gap: 10px;
 }
 
 .view-toggle button {
-  background: var(--surface);
+  background: transparent;
   border: 0;
   color: var(--ink-muted);
   cursor: pointer;
-  min-height: 38px;
-  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  min-height: 0;
+  padding: 0;
 }
 
 .view-toggle button.is-active {
-  background: var(--ink);
-  color: var(--surface);
+  background: transparent;
+  color: var(--ink);
 }
 
 .brand-logo {
@@ -626,7 +626,8 @@ h2 {
   display: grid;
   gap: 12px;
   margin-top: 34px;
-  padding: 12px;
+  padding: 12px 12px 44px;
+  position: relative;
 }
 
 .material-heading {
@@ -816,8 +817,10 @@ h2 {
 
 .box-add-pill {
   align-self: end;
-  grid-column: 1 / -1;
-  justify-self: end;
+  bottom: 12px;
+  justify-self: auto;
+  position: absolute;
+  right: 12px;
 }
 
 .calendar-shell {
@@ -959,8 +962,8 @@ h2 {
 
 .month-weekdays {
   color: var(--ink-muted);
-  font-size: 10px;
-  text-transform: uppercase;
+  font-size: 11px;
+  text-transform: none;
 }
 
 .month-grid {
@@ -1015,7 +1018,8 @@ h2 {
   display: grid;
   gap: 2px;
   min-height: 42px;
-  padding: 6px;
+  padding: 6px 30px 6px 6px;
+  position: relative;
 }
 
 .month-print-chip.is-failed {
@@ -1044,6 +1048,23 @@ h2 {
 .month-print-chip span,
 .month-print-chip small {
   font-size: 10px;
+}
+
+.month-print-chip .month-printer-pill {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(31, 31, 29, 0.28);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 9px;
+  height: 18px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 18px;
+  padding: 2px 5px;
+  position: absolute;
+  right: 5px;
+  top: 5px;
 }
 
 .printer-title {
@@ -1736,7 +1757,8 @@ h2 {
 
 .material-card-list {
   align-items: start;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  width: 100%;
 }
 
 .material-card-list .inventory-metrics {

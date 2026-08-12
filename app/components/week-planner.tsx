@@ -37,7 +37,7 @@ const SHIPPING_BUFFER_DAYS = 3;
 const PACKAGING_BUFFER_DAYS = 1;
 const DEADLINE_BUFFER_DAYS = SHIPPING_BUFFER_DAYS + PACKAGING_BUFFER_DAYS;
 const BASE_WEEK_START = "2026-08-03T00:00:00";
-const MIN_WEEK_OFFSET = 0;
+const MIN_WEEK_OFFSET = -52;
 const MAX_WEEK_OFFSET = 4;
 const HOURS = Array.from({ length: DAY_HOURS }, (_, hour) => hour);
 const HOUR_LINES = Array.from({ length: DAY_HOURS + 1 }, (_, hour) => hour);
@@ -1577,7 +1577,7 @@ export function WeekPlanner() {
   const currentTimeStyle = isDateInWeek(now, weekStart)
     ? getCurrentTimeStyle(now, weekStart)
     : null;
-  const canGoBack = weekOffset > MIN_WEEK_OFFSET;
+  const canGoBack = true;
   const canGoForward = weekOffset < MAX_WEEK_OFFSET;
   const selectedNewProduct = productById.get(newPrint.productId) ?? productData[0];
   const candidateRun = buildCandidateRun(newPrint);
@@ -1624,8 +1624,7 @@ export function WeekPlanner() {
   const canLoadMoreMobileWeeks = mobileWeekCount < MAX_WEEK_OFFSET + 1;
   const monthDays = getMonthDays(monthStart);
   const monthLabel = monthStart.toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric"
+    month: "long"
   });
   const projectRows = getProjectOverviewRows(runs, timelineEvents, productById).filter(
     (project) => !hiddenProjectIds.has(project.id)
@@ -4263,7 +4262,7 @@ export function WeekPlanner() {
               />
             </div>
             <div className="month-weekdays" aria-hidden="true">
-              {["mo", "tu", "we", "th", "fr", "sa", "su"].map((label) => (
+              {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((label) => (
                 <span key={label}>{label}</span>
               ))}
             </div>
@@ -4305,11 +4304,9 @@ export function WeekPlanner() {
                         >
                           <strong>{entry.product.name}</strong>
                           <span>{entry.run.project}</span>
-                          <small>
-                            {formatPrinterName(
-                              printers.find((printer) => printer.id === entry.run.printerId) ??
-                                printers[0]
-                            )}
+                          <small className="month-printer-pill">
+                            {printers.find((printer) => printer.id === entry.run.printerId)
+                              ?.name ?? "1"}
                           </small>
                         </article>
                       ))}

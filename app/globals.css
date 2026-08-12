@@ -1665,7 +1665,7 @@ h2 {
 
 .timeline-board {
   background: transparent;
-  height: 148px;
+  height: var(--timeline-board-height, 148px);
   position: relative;
   width: var(--calendar-width);
 }

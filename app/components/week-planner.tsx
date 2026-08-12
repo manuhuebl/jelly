@@ -131,6 +131,10 @@ type TimelineStyle = CSSProperties & {
   "--timeline-width": string;
 };
 
+type TimelineBoardStyle = CSSProperties & {
+  "--timeline-board-height": string;
+};
+
 type DragState = {
   deltaX: number;
   deltaY: number;
@@ -1100,6 +1104,16 @@ function buildEventDateRange(form: NewEventForm) {
   };
 }
 
+function eventRangeIntersectsWeek(
+  range: { endDateTime: string; startDateTime: string },
+  weekStart: Date
+) {
+  const weekEnd = getWeekEnd(weekStart);
+
+  return asDate(range.startDateTime) < weekEnd && asDate(range.endDateTime) >= weekStart;
+}
+
+
 function getNextWorkday(date: Date) {
   let next = addDays(date, 1);
 
@@ -1404,14 +1418,6 @@ function getTimelineStyle(entry: TimelineEntry, weekStart: Date, index: number):
     entry.type === "deadline"
       ? ((visibleStart.getTime() - weekStart.getTime()) / (WEEK_DAYS * DAY_MS)) * 100 + 0.5
       : ((visibleStart.getTime() - weekStart.getTime()) / (WEEK_DAYS * DAY_MS)) * 100;
-  const typeTop: Record<TimelineKind, number> = {
-    custom: 12,
-    deadline: 44 + (index % 2) * 34,
-    event: 12,
-    ooo: 112,
-    "social media": 12,
-    task: 112
-  };
   const width = Math.max(
     ((visibleEnd.getTime() - visibleStart.getTime()) / (WEEK_DAYS * DAY_MS)) * 100,
     entry.type === "deadline" ? 9 : 5
@@ -1420,7 +1426,7 @@ function getTimelineStyle(entry: TimelineEntry, weekStart: Date, index: number):
   return {
     "--event-color": getTimelineColor(entry),
     "--timeline-left": `${left}%`,
-    "--timeline-top": `${typeTop[entry.type]}px`,
+    "--timeline-top": `${10 + index * 28}px`,
     "--timeline-width": entry.type === "deadline" ? "12.8%" : `${width}%`
   };
 }
@@ -1644,6 +1650,9 @@ export function WeekPlanner() {
   const canSaveEventEdit = Boolean(selectedEvent && editEvent?.title.trim());
   const canSaveDeadlineEdit = Boolean(selectedDeadline && editDeadlineDate);
   const timelineEntries = getTimelineEntries(runs, timelineEvents, weekStart, productById);
+  const timelineBoardStyle: TimelineBoardStyle = {
+    "--timeline-board-height": `${Math.max(86, timelineEntries.length * 28 + 18)}px`
+  };
   const mobileDays = getMobileDays(weekStart, mobileWeekCount);
   const mobileTimelineEntries = getTimelineEntries(
     runs,
@@ -2400,6 +2409,14 @@ export function WeekPlanner() {
       title: ""
     }));
     setIsEventOpen(false);
+
+    if (!eventRangeIntersectsWeek(eventRange, weekStart)) {
+      setNotice({
+        title: "Event added",
+        body: "This event is outside the current week.",
+        tone: "neutral"
+      });
+    }
   }
 
   function saveEventEdit(event: FormEvent<HTMLFormElement>) {
@@ -4255,7 +4272,7 @@ export function WeekPlanner() {
           </div>
           <div className="timeline-row">
             <div className="calendar-time-spacer" />
-            <div className="timeline-board">
+            <div className="timeline-board" style={timelineBoardStyle}>
               {timelineEntries.length === 0 ? (
                 <p className="empty-timeline">no events this week</p>
               ) : null}

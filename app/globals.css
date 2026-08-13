@@ -1962,12 +1962,8 @@ h2 {
   border-color: var(--project-color);
 }
 
-.kanban-run-row {
-  cursor: grab;
-}
-
-.kanban-run-row:active {
-  cursor: grabbing;
+.kanban-project-group {
+  gap: 12px;
 }
 
 .project-summary {
@@ -2014,17 +2010,17 @@ h2 {
   line-height: 1.05;
 }
 
-.kanban-run-summary {
-  cursor: grab;
+.kanban-project-summary {
+  cursor: default;
   grid-template-columns: minmax(0, 1fr);
 }
 
-.kanban-run-summary .project-card-main {
+.kanban-project-summary .project-card-main {
   gap: 8px;
 }
 
-.kanban-run-summary strong {
-  font-size: 16px;
+.kanban-project-summary strong {
+  font-size: 22px;
   white-space: normal;
 }
 
@@ -2038,10 +2034,55 @@ h2 {
   white-space: nowrap;
 }
 
+.kanban-run-list {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0;
+}
+
+.kanban-run-item {
+  align-items: start;
+  cursor: grab;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 8px 0;
+}
+
+.kanban-run-item + .kanban-run-item {
+  border-top: 1px solid var(--line);
+}
+
+.kanban-run-item:active {
+  cursor: grabbing;
+}
+
+.kanban-run-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kanban-run-copy strong {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.08;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kanban-run-copy small {
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.1;
+}
+
 .kanban-run-edit {
   display: grid;
   gap: 8px;
   grid-template-columns: 22px minmax(0, 1fr);
+  grid-column: 1 / -1;
 }
 
 .kanban-run-edit .project-color-input {

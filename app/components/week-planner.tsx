@@ -343,6 +343,13 @@ type KanbanRunRow = ScheduledRun & {
   total: number;
 };
 
+type KanbanProjectGroup = {
+  deadline: Date | null;
+  id: string;
+  project: string;
+  runs: KanbanRunRow[];
+};
+
 function asDate(value: string) {
   return new Date(value);
 }
@@ -1084,6 +1091,48 @@ function getKanbanRunRows(
     });
 }
 
+function groupKanbanRowsByProject(rows: KanbanRunRow[]): KanbanProjectGroup[] {
+  const groups = new Map<string, KanbanProjectGroup>();
+
+  rows.forEach((entry) => {
+    const current = groups.get(entry.projectKey) ?? {
+      deadline: entry.deadline,
+      id: entry.projectKey,
+      project: entry.run.project,
+      runs: []
+    };
+
+    current.runs.push(entry);
+
+    if (entry.deadline && (!current.deadline || entry.deadline < current.deadline)) {
+      current.deadline = entry.deadline;
+    }
+
+    groups.set(entry.projectKey, current);
+  });
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      runs: [...group.runs].sort((a, b) => a.start.getTime() - b.start.getTime())
+    }))
+    .sort((a, b) => {
+      if (a.deadline && b.deadline) {
+        return a.deadline.getTime() - b.deadline.getTime();
+      }
+
+      if (a.deadline) {
+        return -1;
+      }
+
+      if (b.deadline) {
+        return 1;
+      }
+
+      return a.project.localeCompare(b.project);
+    });
+}
+
 function buildStartDateTime(date: string, time: string) {
   return `${date}T${time}:00`;
 }
@@ -1791,6 +1840,13 @@ export function WeekPlanner() {
       )
     }),
     {} as Record<ProjectStage, KanbanRunRow[]>
+  );
+  const kanbanProjectGroupsByStage = PROJECT_STAGES.reduce(
+    (groups, stage) => ({
+      ...groups,
+      [stage.id]: groupKanbanRowsByProject(kanbanRowsByStage[stage.id])
+    }),
+    {} as Record<ProjectStage, KanbanProjectGroup[]>
   );
   const pendingStartRun = pendingStartRunId
     ? runs.find((run) => run.id === pendingStartRunId)
@@ -4547,6 +4603,40 @@ export function WeekPlanner() {
         </section>
 
         <section className="event-timeline" aria-label="Marketing and deadline timeline">
+          {selectedDeadline ? (
+            <form
+              className="event-form event-edit-inline deadline-edit-inline"
+              aria-label="Edit deadline"
+              onSubmit={saveDeadlineEdit}
+            >
+              <label>
+                <span>project</span>
+                <input readOnly value={selectedDeadline.project} />
+              </label>
+              <label>
+                <span>deadline</span>
+                <input
+                  autoFocus
+                  type="date"
+                  value={editDeadlineDate}
+                  onChange={(event) => setEditDeadlineDate(event.target.value)}
+                />
+              </label>
+              <button disabled={!canSaveDeadlineEdit} type="submit">
+                Save
+              </button>
+              <button
+                aria-label="Close deadline edit"
+                className="icon-button"
+                onClick={() => {
+                  setSelectedDeadline(null);
+                  setEditDeadlineDate("");
+                }}
+                type="button"
+              />
+            </form>
+          ) : null}
+
           {selectedEvent && editEvent ? (
             <form
               className="event-form event-edit-inline"
@@ -4894,117 +4984,137 @@ export function WeekPlanner() {
                 <span>{kanbanRowsByStage[stage.id].length}</span>
               </div>
               <div className="project-column-list">
-                {kanbanRowsByStage[stage.id].map((entry) => {
-                  const projectColor = getProjectColor(entry.run.project, projectColors);
-                  const isEditing = editingKanbanRunId === entry.run.id;
-                  const hasProjectGroup = entry.total > 1;
+                {kanbanProjectGroupsByStage[stage.id].map((group) => {
+                  const projectColor = getProjectColor(group.project, projectColors);
 
                   return (
                     <article
-                      className={`project-row kanban-run-row ${
+                      className={`project-row kanban-project-group ${
                         projectColor ? "has-project-color" : ""
                       }`}
-                      draggable={!isEditing}
-                      key={entry.run.id}
-                      onDragEnd={handlePrintDragEnd}
-                      onDragStart={(event) =>
-                        handleKanbanRunDragStart(event, entry.run.id)
-                      }
+                      key={`${stage.id}-${group.id}`}
                       style={
                         {
                           "--project-color": projectColor ?? "#1f1f1d"
                         } as CSSProperties & { "--project-color": string }
                       }
                     >
-                      {isEditing ? (
-                        <form className="kanban-run-edit" onSubmit={saveKanbanRunEdit}>
-                          <input
-                            aria-label="Project color"
-                            className={`project-color-input kanban-color-input ${
-                              kanbanRunEdit.color ? "" : "is-empty"
-                            }`}
-                            type="color"
-                            value={kanbanRunEdit.color || "#ffffff"}
-                            onChange={(event) =>
-                              setKanbanRunEdit((current) => ({
-                                ...current,
-                                color: event.target.value
-                              }))
-                            }
-                          />
-                          <select
-                            aria-label="Product"
-                            className="kanban-product-field"
-                            value={kanbanRunEdit.productId}
-                            onChange={(event) =>
-                              setKanbanRunEdit((current) => ({
-                                ...current,
-                                productId: event.target.value
-                              }))
-                            }
-                          >
-                            {visibleProducts.map((product) => (
-                              <option key={product.id} value={product.id}>
-                                {product.name}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            aria-label="Project"
-                            className="kanban-project-field"
-                            value={kanbanRunEdit.project}
-                            onChange={(event) =>
-                              setKanbanRunEdit((current) => ({
-                                ...current,
-                                project: event.target.value
-                              }))
-                            }
-                          />
-                          <div className="project-detail-actions kanban-edit-actions">
-                            <button
-                              className="mini-edit-pill project-remove-button"
-                              disabled={!kanbanRunEdit.project.trim()}
-                              type="submit"
+                      <div className="project-summary kanban-project-summary">
+                        <span className="project-card-main">
+                          <strong>
+                            {group.runs.length}
+                            {group.deadline
+                              ? ` by ${formatCompactDate(group.deadline)}`
+                              : ""}
+                          </strong>
+                          <span className="kanban-project-title">{group.project}</span>
+                        </span>
+                      </div>
+                      <div className="kanban-run-list">
+                        {group.runs.map((entry) => {
+                          const isEditing = editingKanbanRunId === entry.run.id;
+                          const hasProjectGroup = entry.total > 1;
+
+                          return (
+                            <div
+                              className="kanban-run-item"
+                              draggable={!isEditing}
+                              key={entry.run.id}
+                              onDragEnd={handlePrintDragEnd}
+                              onDragStart={(event) =>
+                                handleKanbanRunDragStart(event, entry.run.id)
+                              }
                             >
-                              save
-                            </button>
-                            <button
-                              aria-label="Cancel print edit"
-                              className="icon-button"
-                              onClick={cancelKanbanRunEdit}
-                              type="button"
-                            />
-                          </div>
-                        </form>
-                      ) : (
-                        <>
-                          <div className="project-summary kanban-run-summary">
-                            <span className="project-card-main">
-                              <strong>
-                                {entry.product.name}
-                                {hasProjectGroup
-                                  ? ` (${entry.index}/${entry.total})`
-                                  : ""}
-                                {entry.deadline
-                                  ? ` by ${formatCompactDate(entry.deadline)}`
-                                  : ""}
-                              </strong>
-                              <span className="kanban-project-title">
-                                {entry.run.project}
-                              </span>
-                            </span>
-                          </div>
-                          <div className="project-detail-actions">
-                            <button
-                              className="mini-edit-pill project-remove-button"
-                              onClick={() => openKanbanRunEdit(entry)}
-                              type="button"
-                            >
-                              edit
-                            </button>
-                          </div>
-                        </>
-                      )}
+                              {isEditing ? (
+                                <form
+                                  className="kanban-run-edit"
+                                  onSubmit={saveKanbanRunEdit}
+                                >
+                                  <input
+                                    aria-label="Project color"
+                                    className={`project-color-input kanban-color-input ${
+                                      kanbanRunEdit.color ? "" : "is-empty"
+                                    }`}
+                                    type="color"
+                                    value={kanbanRunEdit.color || "#ffffff"}
+                                    onChange={(event) =>
+                                      setKanbanRunEdit((current) => ({
+                                        ...current,
+                                        color: event.target.value
+                                      }))
+                                    }
+                                  />
+                                  <select
+                                    aria-label="Product"
+                                    className="kanban-product-field"
+                                    value={kanbanRunEdit.productId}
+                                    onChange={(event) =>
+                                      setKanbanRunEdit((current) => ({
+                                        ...current,
+                                        productId: event.target.value
+                                      }))
+                                    }
+                                  >
+                                    {visibleProducts.map((product) => (
+                                      <option key={product.id} value={product.id}>
+                                        {product.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    aria-label="Project"
+                                    className="kanban-project-field"
+                                    value={kanbanRunEdit.project}
+                                    onChange={(event) =>
+                                      setKanbanRunEdit((current) => ({
+                                        ...current,
+                                        project: event.target.value
+                                      }))
+                                    }
+                                  />
+                                  <div className="project-detail-actions kanban-edit-actions">
+                                    <button
+                                      className="mini-edit-pill project-remove-button"
+                                      disabled={!kanbanRunEdit.project.trim()}
+                                      type="submit"
+                                    >
+                                      save
+                                    </button>
+                                    <button
+                                      aria-label="Cancel print edit"
+                                      className="icon-button"
+                                      onClick={cancelKanbanRunEdit}
+                                      type="button"
+                                    />
+                                  </div>
+                                </form>
+                              ) : (
+                                <>
+                                  <span className="kanban-run-copy">
+                                    <strong>
+                                      {entry.product.name}
+                                      {hasProjectGroup
+                                        ? ` (${entry.index}/${entry.total})`
+                                        : ""}
+                                    </strong>
+                                    <small>
+                                      {formatCompactDate(entry.start)}{" "}
+                                      {formatTime(entry.start)}-{formatTime(entry.end)}
+                                    </small>
+                                  </span>
+                                  <button
+                                    className="mini-edit-pill project-remove-button"
+                                    onClick={() => openKanbanRunEdit(entry)}
+                                    type="button"
+                                  >
+                                    edit
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </article>
                   );
                 })}

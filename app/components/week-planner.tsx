@@ -5345,7 +5345,7 @@ export function WeekPlanner() {
                         group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
                       }`;
                   const summaryMeta =
-                    groupTotal > group.runs.length
+                    groupTotal > 1
                       ? `total of ${groupTotal}${
                           group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
                         }`

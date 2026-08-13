@@ -1874,6 +1874,7 @@ export function WeekPlanner() {
   );
   const [projectColors, setProjectColors] = useState<Record<string, string>>({});
   const [editingKanbanRunId, setEditingKanbanRunId] = useState<string | null>(null);
+  const [savedKanbanRunId, setSavedKanbanRunId] = useState<string | null>(null);
   const [kanbanRunEdit, setKanbanRunEdit] = useState<RunEditForm>({
     color: "",
     customerDeadline: "",
@@ -2700,6 +2701,7 @@ export function WeekPlanner() {
   }
 
   function openKanbanRunEdit(entry: KanbanRunRow) {
+    setSavedKanbanRunId(null);
     setEditingKanbanRunId(entry.run.id);
     setKanbanRunEdit({
       color: getProjectColor(entry.run.project, projectColors) ?? "",
@@ -2797,7 +2799,13 @@ export function WeekPlanner() {
       return next;
     });
 
+    const savedRunId = editingKanbanRunId;
+
     cancelKanbanRunEdit();
+    setSavedKanbanRunId(savedRunId);
+    window.setTimeout(() => {
+      setSavedKanbanRunId((current) => (current === savedRunId ? null : current));
+    }, 1400);
     showSavedNotice();
   }
 
@@ -5685,7 +5693,7 @@ export function WeekPlanner() {
                                     onClick={() => openKanbanRunEdit(entry)}
                                     type="button"
                                   >
-                                    edit
+                                    {savedKanbanRunId === entry.run.id ? "saved" : "edit"}
                                   </button>
                                 </>
                               )}

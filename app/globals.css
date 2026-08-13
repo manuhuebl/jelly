@@ -615,7 +615,8 @@ h2 {
 }
 
 .material-edit-pill,
-.box-add-pill {
+.box-add-pill,
+.product-add-button {
   background: rgba(31, 31, 29, 0.06);
 }
 
@@ -1083,10 +1084,9 @@ h2 {
 .month-view {
   display: grid;
   gap: 6px;
-  margin-left: var(--time-gutter);
   padding-top: 36px;
   position: relative;
-  width: var(--calendar-width);
+  width: 100%;
 }
 
 .month-view-heading {
@@ -1125,7 +1125,7 @@ h2 {
 
 .month-arrow.is-left {
   background-image: url("/icons/pfeil-links.svg");
-  left: calc(-1 * var(--time-gutter));
+  left: 0;
 }
 
 .month-arrow.is-right {
@@ -1707,10 +1707,15 @@ h2 {
 
 .print-card.is-expanded {
   height: auto;
-  min-height: 112px;
+  min-height: 0;
   overflow: visible;
-  padding-bottom: 22px;
+  padding-bottom: 18px;
   z-index: 10;
+}
+
+.print-card.is-short.is-expanded {
+  gap: 3px;
+  padding: 8px 8px 18px;
 }
 
 .print-card.is-expanded .card-body {
@@ -2109,7 +2114,7 @@ h2 {
 
 .kanban-project-summary {
   align-items: start;
-  grid-template-columns: minmax(0, 1fr) 16px;
+  grid-template-columns: minmax(0, 1fr) 22px;
 }
 
 .kanban-project-summary .project-card-main {

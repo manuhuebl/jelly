@@ -5124,10 +5124,8 @@ export function WeekPlanner() {
                   const groupKey = `${stage.id}-${group.id}`;
                   const isExpanded = expandedProjectIds.has(groupKey);
                   const isSingleRun = group.runs.length === 1;
-                  const summaryTitle = isSingleRun
-                    ? `${group.runs[0].product.name}${
-                        group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
-                      }`
+                  const summaryMeta = isSingleRun
+                    ? ""
                     : `${group.runs.length}${
                         group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
                       }`;
@@ -5157,8 +5155,10 @@ export function WeekPlanner() {
                         type="button"
                       >
                         <span className="project-card-main">
-                          <strong>{summaryTitle}</strong>
-                          <span className="kanban-project-title">{group.project}</span>
+                          <strong>{group.project}</strong>
+                          {summaryMeta ? (
+                            <span className="kanban-project-title">{summaryMeta}</span>
+                          ) : null}
                           {stageSummary ? (
                             <small className="kanban-project-status">{stageSummary}</small>
                           ) : null}

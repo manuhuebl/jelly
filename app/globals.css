@@ -1335,10 +1335,10 @@ h2 {
   gap: 4px;
   height: calc(var(--duration-hours) * var(--hour-height));
   left: calc(
-    (var(--day-index) * var(--calendar-day-width)) +
+    (var(--day-index) * var(--calendar-day-width)) + var(--card-gap) +
       (
         var(--lane-index) *
-          (var(--calendar-day-width) / var(--lane-count))
+          ((var(--calendar-day-width) - (var(--card-gap) * 2)) / var(--lane-count))
       )
   );
   overflow: hidden;
@@ -1346,7 +1346,7 @@ h2 {
   position: absolute;
   top: calc(var(--start-hour) * var(--hour-height));
   width: calc(
-    var(--calendar-day-width) / var(--lane-count)
+    (var(--calendar-day-width) - (var(--card-gap) * 2)) / var(--lane-count)
   );
 }
 
@@ -1957,7 +1957,11 @@ h2 {
   font-size: 12px;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
+  margin-left: -8px;
+  margin-right: -8px;
   padding-bottom: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
   text-transform: none;
 }
 

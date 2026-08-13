@@ -5339,20 +5339,12 @@ export function WeekPlanner() {
                   const isSingleRun = group.runs.length === 1;
                   const groupTotal = group.runs[0]?.total ?? group.runs.length;
                   const singleRunProductName = group.runs[0]?.product.name ?? group.project;
-                  const summaryHeadline = isSingleRun
-                    ? singleRunProductName
-                    : `${group.runs.length}${
-                        group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
-                      }`;
-                  const summaryMeta =
+                  const summaryLine =
                     groupTotal > 1
                       ? `total of ${groupTotal}${
                           group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
                         }`
-                      : "";
-                  const summaryLine = [summaryHeadline, summaryMeta]
-                    .filter(Boolean)
-                    .join(" - ");
+                      : singleRunProductName;
                   const stageSummary = getProjectStageSummary(
                     group.id,
                     kanbanRows,

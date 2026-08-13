@@ -238,7 +238,7 @@ h2 {
 .mobile-edit-button {
   align-items: center;
   background: rgba(255, 255, 255, 0.15);
-  border: 1px solid var(--line);
+  border: 0.75px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
@@ -735,16 +735,16 @@ h2 {
   display: block;
   gap: 12px;
   margin-top: 34px;
-  padding: 12px;
+  padding: 0;
   position: relative;
 }
 
 .material-heading {
+  align-items: center;
   border-bottom: 1px solid var(--line);
-  display: block;
-  margin-left: -12px;
-  margin-right: -12px;
-  padding: 0 12px 8px;
+  display: flex;
+  min-height: 34px;
+  padding: 10px 12px;
 }
 
 .material-heading .eyebrow {
@@ -1385,7 +1385,7 @@ h2 {
 .card-topline button {
   align-items: center;
   background: rgba(255, 255, 255, 0.15);
-  border: 1px solid var(--line);
+  border: 0.75px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
@@ -1513,7 +1513,7 @@ h2 {
 
 .card-actions button {
   background: rgba(255, 255, 255, 0.15);
-  border: 1px solid var(--line);
+  border: 0.75px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
@@ -1795,12 +1795,12 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 6px;
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
 .project-overview {
-  gap: 8px;
   margin-top: 22px;
 }
 
@@ -1817,7 +1817,8 @@ h2 {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   justify-self: stretch;
   min-width: 0;
-  margin-top: 8px;
+  margin-top: 0;
+  padding: 12px;
   width: 100%;
 }
 
@@ -1846,11 +1847,12 @@ h2 {
 }
 
 .project-overview > .eyebrow {
+  align-items: center;
   border-bottom: 1px solid var(--line);
-  margin-left: -12px;
-  margin-right: -12px;
+  display: flex;
   margin-bottom: 0;
-  padding: 0 12px 8px;
+  min-height: 34px;
+  padding: 10px 12px;
 }
 
 .project-list {
@@ -1865,6 +1867,7 @@ h2 {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 12px;
 }
 
 .project-column {
@@ -2221,18 +2224,20 @@ h2 {
 
 .product-inventory {
   margin-top: 12px;
-  padding: 12px;
+  overflow: hidden;
+  padding: 0;
 }
 
 .product-inventory .section-heading {
+  align-items: center;
   border-bottom: 1px solid var(--line);
-  margin-left: -12px;
-  margin-right: -12px;
-  padding: 0 12px 8px;
+  min-height: 34px;
+  padding: 10px 12px;
 }
 
-.stock-list {
-  margin-top: 8px;
+.product-inventory > .stock-list {
+  margin-top: 0;
+  padding: 12px;
 }
 
 .stock-row {
@@ -2898,7 +2903,7 @@ h2 {
     font-size: 8px;
   }
 
-.stock-list,
+  .stock-list,
   .product-list {
     grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   }

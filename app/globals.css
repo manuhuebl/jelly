@@ -440,7 +440,8 @@ h2 {
 
 .inventory-popup .popup-close,
 .box-popup .popup-close,
-.notice-popup .popup-close {
+.notice-popup .popup-close,
+.delete-popup .popup-close {
   filter: brightness(0) invert(1) contrast(2);
   opacity: 1;
 }
@@ -1530,6 +1531,17 @@ h2 {
   color: var(--ink);
 }
 
+.print-card.is-failed .card-topline span,
+.print-card.is-failed .card-topline strong,
+.print-card.is-failed .card-topline button,
+.print-card.is-failed .card-actions button,
+.mobile-print-card.is-failed .mobile-edit-button,
+.month-print-chip.is-failed .month-printer-pill {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.62);
+  color: var(--surface);
+}
+
 .print-card.is-short {
   gap: 2px;
 }
@@ -1970,7 +1982,7 @@ h2 {
 .project-card-main {
   align-content: start;
   display: grid;
-  gap: 10px;
+  gap: 14px;
   min-height: 54px;
 }
 
@@ -1987,6 +1999,11 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.project-summary strong {
+  font-size: 20px;
+  line-height: 1.05;
 }
 
 .material-card .material-amount {
@@ -2233,12 +2250,18 @@ h2 {
 .timeline-item.type-deadline .timeline-edit-button {
   background: rgba(255, 255, 255, 0.3);
   border: 0;
-  border-left: 0.75px solid var(--line);
-  color: var(--ink);
+  border-left: 0.75px solid rgba(255, 255, 255, 0.56);
+  color: var(--surface);
   font-size: 9px;
   min-height: 0;
   padding: 0 8px;
   right: 0;
+}
+
+.timeline-item.is-past .timeline-edit-button {
+  background: rgba(255, 255, 255, 0.3);
+  border-left-color: rgba(255, 255, 255, 0.56);
+  color: var(--surface);
 }
 
 @container (max-width: 120px) {
@@ -2815,6 +2838,13 @@ h2 {
   .mobile-event-item.is-past {
     background: #6f706b;
     border-color: #6f706b;
+    color: var(--surface);
+  }
+
+  .mobile-event-item.type-deadline .timeline-edit-button,
+  .mobile-event-item.is-past .timeline-edit-button {
+    background: rgba(255, 255, 255, 0.3);
+    border-left-color: rgba(255, 255, 255, 0.56);
     color: var(--surface);
   }
 

@@ -4736,13 +4736,13 @@ export function WeekPlanner() {
                         type="button"
                       >
                         <span className="project-card-main">
+                          <strong>{project.project}</strong>
                           <span className="project-meta">
                             <em>{project.runs.length}</em>
                             {project.deadline ? (
                               <small>by {formatCompactDate(project.deadline)}</small>
                             ) : null}
                           </span>
-                          <strong>{project.project}</strong>
                         </span>
                         <span
                           className={`project-arrow ${isExpanded ? "is-open" : ""}`}

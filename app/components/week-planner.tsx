@@ -5346,7 +5346,7 @@ export function WeekPlanner() {
                       }`;
                   const summaryMeta =
                     groupTotal > group.runs.length
-                      ? `total ${groupTotal}${
+                      ? `total of ${groupTotal}${
                           group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
                         }`
                       : "";
@@ -5389,8 +5389,8 @@ export function WeekPlanner() {
                         type="button"
                       >
                         <span className="project-card-main">
-                          <strong>{summaryHeadline}</strong>
-                          <span className="kanban-project-title">{group.project}</span>
+                          <strong>{group.project}</strong>
+                          <span className="kanban-project-title">{summaryHeadline}</span>
                           {summaryMeta ? <small>{summaryMeta}</small> : null}
                           {stageSummary ? (
                             <small className="kanban-project-status">{stageSummary}</small>

@@ -158,7 +158,7 @@ select:focus-visible {
 }
 
 .view-toggle button.is-active {
-  background: var(--ink-muted);
+  background: #60675d;
   color: var(--surface);
 }
 
@@ -1313,6 +1313,10 @@ h2 {
   top: calc(var(--hour) * var(--hour-height));
 }
 
+.hour-line:first-child {
+  border-top: 0;
+}
+
 .empty-week {
   color: var(--ink-muted);
   font-size: 13px;
@@ -1459,7 +1463,7 @@ h2 {
 }
 
 .progress-track {
-  border: 1px solid var(--line);
+  border: 0.5px solid var(--line);
   border-radius: 999px;
   height: 8px;
   margin-left: -2px;

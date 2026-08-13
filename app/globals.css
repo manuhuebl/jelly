@@ -1042,6 +1042,7 @@ h2 {
 .month-view {
   display: grid;
   gap: 6px;
+  padding-top: 27px;
   position: relative;
 }
 

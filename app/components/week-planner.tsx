@@ -3788,7 +3788,11 @@ export function WeekPlanner() {
   }
 
   function handleProjectStageDragOver(event: DragEvent<HTMLElement>) {
-    if (nativeDragRef.current?.kind !== "kanban-run") {
+    const hasKanbanPayload =
+      nativeDragRef.current?.kind === "kanban-run" ||
+      event.dataTransfer.types.includes("text/plain");
+
+    if (!hasKanbanPayload) {
       return;
     }
 
@@ -3798,8 +3802,13 @@ export function WeekPlanner() {
 
   function handleProjectStageDrop(event: DragEvent<HTMLElement>, stage: ProjectStage) {
     const dragMeta = nativeDragRef.current;
+    const transferValue = event.dataTransfer.getData("text/plain");
+    const transferRunId = transferValue.startsWith("kanban-run:")
+      ? transferValue.replace("kanban-run:", "")
+      : "";
+    const runId = dragMeta?.kind === "kanban-run" ? dragMeta.runId : transferRunId;
 
-    if (dragMeta?.kind !== "kanban-run") {
+    if (!runId) {
       return;
     }
 
@@ -3808,48 +3817,48 @@ export function WeekPlanner() {
     nativeDragRef.current = null;
     setDragState(null);
 
-    const runEntry = kanbanRows.find((entry) => entry.run.id === dragMeta.runId);
+    const runEntry = kanbanRows.find((entry) => entry.run.id === runId);
 
     if (!runEntry) {
       return;
     }
 
     const currentStage = getRunStage(runEntry, manualRunStages, now);
-    const previousStage = manualRunStages[dragMeta.runId];
+    const previousStage = manualRunStages[runId];
 
     if (currentStage === stage) {
       return;
     }
 
     const productCounts = new Map<Product["id"], number>([[runEntry.product.id, 1]]);
-    const wasShipped = shippedInventoryRunIds.has(dragMeta.runId);
+    const wasShipped = shippedInventoryRunIds.has(runId);
     const willBeShipped = stage === "shipped";
     let nextShippedRunIds = new Set(shippedInventoryRunIds);
 
     if (willBeShipped && !wasShipped && runEntry.run.status === "finished") {
       adjustManualProductStock(productCounts, "subtract");
       nextShippedRunIds = new Set(nextShippedRunIds);
-      nextShippedRunIds.add(dragMeta.runId);
+      nextShippedRunIds.add(runId);
       setShippedInventoryRunIds(nextShippedRunIds);
     }
 
     if (!willBeShipped && wasShipped) {
       adjustManualProductStock(productCounts, "add");
       nextShippedRunIds = new Set(nextShippedRunIds);
-      nextShippedRunIds.delete(dragMeta.runId);
+      nextShippedRunIds.delete(runId);
       setShippedInventoryRunIds(nextShippedRunIds);
     }
 
     const nextManualStages = {
       ...manualRunStages,
-      [dragMeta.runId]: stage
+      [runId]: stage
     };
 
     setManualRunStages(nextManualStages);
     setPendingUndoMove(null);
     setPendingUndoKanbanMove({
       previousStage,
-      runId: dragMeta.runId
+      runId
     });
     savePlannerSnapshot(runs, {
       manualRunStages: nextManualStages,
@@ -3869,7 +3878,7 @@ export function WeekPlanner() {
     window.setTimeout(() => {
       setNotice((current) => (current === nextNotice ? null : current));
       setPendingUndoKanbanMove((current) =>
-        current?.runId === dragMeta.runId ? null : current
+        current?.runId === runId ? null : current
       );
     }, 5000);
   }
@@ -4235,7 +4244,8 @@ export function WeekPlanner() {
             <label>
               <span>start date</span>
               <input
-                type="date"
+                inputMode="numeric"
+                placeholder="yyyy-mm-dd"
                 value={newPrint.date}
                 onChange={(event) => updateNewPrint("date", event.target.value)}
               />
@@ -4254,7 +4264,8 @@ export function WeekPlanner() {
               <span>deadline</span>
               <div className="clearable-field">
                 <input
-                  type="date"
+                  inputMode="numeric"
+                  placeholder="yyyy-mm-dd"
                   value={newPrint.customerDeadline}
                   onChange={(event) => updateNewPrint("customerDeadline", event.target.value)}
                 />
@@ -4264,7 +4275,7 @@ export function WeekPlanner() {
                     onClick={() => updateNewPrint("customerDeadline", "")}
                     type="button"
                   >
-                    Clear
+                    clear
                   </button>
                 ) : null}
               </div>
@@ -4386,7 +4397,8 @@ export function WeekPlanner() {
             <label>
               <span>start date</span>
               <input
-                type="date"
+                inputMode="numeric"
+                placeholder="yyyy-mm-dd"
                 value={editPrint.date}
                 onChange={(event) => updateEditPrint("date", event.target.value)}
               />
@@ -4405,7 +4417,8 @@ export function WeekPlanner() {
               <span>deadline</span>
               <div className="clearable-field">
                 <input
-                  type="date"
+                  inputMode="numeric"
+                  placeholder="yyyy-mm-dd"
                   value={editPrint.customerDeadline}
                   onChange={(event) => updateEditPrint("customerDeadline", event.target.value)}
                 />
@@ -4415,7 +4428,7 @@ export function WeekPlanner() {
                     onClick={() => updateEditPrint("customerDeadline", "")}
                     type="button"
                   >
-                    Clear
+                    clear
                   </button>
                 ) : null}
               </div>
@@ -4890,7 +4903,8 @@ export function WeekPlanner() {
                 <div className="clearable-field">
                   <input
                     autoFocus
-                    type="date"
+                    inputMode="numeric"
+                    placeholder="yyyy-mm-dd"
                     value={editDeadlineDate}
                     onChange={(event) => setEditDeadlineDate(event.target.value)}
                   />
@@ -4900,7 +4914,7 @@ export function WeekPlanner() {
                       onClick={() => setEditDeadlineDate("")}
                       type="button"
                     >
-                      Clear
+                      clear
                     </button>
                   ) : null}
                 </div>
@@ -4971,7 +4985,8 @@ export function WeekPlanner() {
               <label>
                 <span>start</span>
                 <input
-                  type="date"
+                  inputMode="numeric"
+                  placeholder="yyyy-mm-dd"
                   value={editEvent.startDate}
                   onChange={(event) => updateEditEvent("startDate", event.target.value)}
                 />
@@ -4979,7 +4994,8 @@ export function WeekPlanner() {
               <label>
                 <span>end</span>
                 <input
-                  type="date"
+                  inputMode="numeric"
+                  placeholder="yyyy-mm-dd"
                   value={editEvent.endDate}
                   onChange={(event) => updateEditEvent("endDate", event.target.value)}
                 />
@@ -5068,7 +5084,8 @@ export function WeekPlanner() {
               <label>
                 <span>start</span>
                 <input
-                  type="date"
+                  inputMode="numeric"
+                  placeholder="yyyy-mm-dd"
                   value={newEvent.startDate}
                   onChange={(event) =>
                     setNewEvent((current) => ({
@@ -5081,7 +5098,8 @@ export function WeekPlanner() {
               <label>
                 <span>end</span>
                 <input
-                  type="date"
+                  inputMode="numeric"
+                  placeholder="yyyy-mm-dd"
                   value={newEvent.endDate}
                   onChange={(event) =>
                     setNewEvent((current) => ({
@@ -5336,7 +5354,14 @@ export function WeekPlanner() {
                       className={`project-row kanban-project-group ${
                         projectColor ? "has-project-color" : ""
                       }`}
+                      draggable={isSingleRun}
                       key={`${stage.id}-${group.id}`}
+                      onDragEnd={handlePrintDragEnd}
+                      onDragStart={(event) => {
+                        if (isSingleRun) {
+                          handleKanbanRunDragStart(event, group.runs[0].run.id);
+                        }
+                      }}
                       style={
                         {
                           "--project-color": projectColor ?? "#1f1f1d"
@@ -5346,7 +5371,14 @@ export function WeekPlanner() {
                       <button
                         aria-expanded={isExpanded}
                         className="project-summary kanban-project-summary"
+                        draggable={isSingleRun}
                         onClick={() => toggleProject(groupKey)}
+                        onDragEnd={handlePrintDragEnd}
+                        onDragStart={(event) => {
+                          if (isSingleRun) {
+                            handleKanbanRunDragStart(event, group.runs[0].run.id);
+                          }
+                        }}
                         type="button"
                       >
                         <span className="project-card-main">
@@ -5430,7 +5462,8 @@ export function WeekPlanner() {
                                   <div className="clearable-field kanban-deadline-field">
                                     <input
                                       aria-label="Deadline"
-                                      type="date"
+                                      inputMode="numeric"
+                                      placeholder="yyyy-mm-dd"
                                       value={kanbanRunEdit.customerDeadline}
                                       onChange={(event) =>
                                         setKanbanRunEdit((current) => ({
@@ -5450,7 +5483,7 @@ export function WeekPlanner() {
                                         }
                                         type="button"
                                       >
-                                        Clear
+                                        clear
                                       </button>
                                     ) : null}
                                   </div>

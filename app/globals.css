@@ -576,6 +576,25 @@ h2 {
   padding: 2px 6px;
 }
 
+.project-color-field {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.project-color-field input[type="color"] {
+  min-width: 0;
+  width: 100%;
+}
+
+.project-color-field .add-color-button {
+  color: var(--ink-muted);
+  justify-self: start;
+  min-height: 24px;
+  padding: 3px 8px;
+}
+
 .form-alert {
   background: var(--action-red);
   border: 1px solid var(--action-red-border);

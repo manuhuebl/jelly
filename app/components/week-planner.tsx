@@ -465,7 +465,7 @@ function getFallbackProjectColor(project: string) {
 function getProjectColor(project: string, projectColors: Record<string, string>) {
   const key = getProjectKey(project);
 
-  return projectColors[key] ?? getFallbackProjectColor(project);
+  return projectColors[key];
 }
 
 function getProductStyleWithProject(
@@ -475,7 +475,7 @@ function getProductStyleWithProject(
 ): ProductStyle {
   return {
     ...getProductStyle(product),
-    "--project-color": getProjectColor(project, projectColors)
+    "--project-color": getProjectColor(project, projectColors) ?? "transparent"
   };
 }
 
@@ -1007,7 +1007,7 @@ function createDefaultPrintForm(weekStart: Date): NewPrintForm {
     customerDeadline: "",
     date: formatDateInput(addDays(weekStart, 2)),
     printerId: "printer-2",
-    projectColor: "#dc8a3a",
+    projectColor: "",
     productId: "len",
     project: "",
     status: "planned",
@@ -1080,7 +1080,7 @@ function buildEditForm(run: PrintRun): NewPrintForm {
     customerDeadline: run.customerDeadline ? formatDateTimeInputDate(run.customerDeadline) : "",
     date: formatDateTimeInputDate(run.startDateTime),
     printerId: run.printerId,
-    projectColor: getFallbackProjectColor(run.project),
+    projectColor: "",
     productId: run.productId,
     project: run.project,
     status: run.status,
@@ -1885,9 +1885,7 @@ export function WeekPlanner() {
     setNewPrint((current) => ({
       ...current,
       projectColor:
-        field === "project"
-          ? projectColors[getProjectKey(value)] ?? current.projectColor
-          : current.projectColor,
+        field === "project" ? projectColors[getProjectKey(value)] ?? "" : current.projectColor,
       [field]: value
     }));
   }
@@ -1898,9 +1896,7 @@ export function WeekPlanner() {
         ? {
             ...current,
             projectColor:
-              field === "project"
-                ? projectColors[getProjectKey(value)] ?? current.projectColor
-                : current.projectColor,
+              field === "project" ? projectColors[getProjectKey(value)] ?? "" : current.projectColor,
             [field]: value
           }
         : current
@@ -2067,10 +2063,17 @@ export function WeekPlanner() {
       return;
     }
 
-    setProjectColors((current) => ({
-      ...current,
-      [projectKey]: form.projectColor || current[projectKey] || getFallbackProjectColor(form.project)
-    }));
+    setProjectColors((current) => {
+      const next = { ...current };
+
+      if (form.projectColor) {
+        next[projectKey] = form.projectColor;
+      } else {
+        delete next[projectKey];
+      }
+
+      return next;
+    });
   }
 
   function updateProductData(
@@ -2228,7 +2231,7 @@ export function WeekPlanner() {
     setSelectedRunId(run.id);
     setEditPrint({
       ...buildEditForm(run),
-      projectColor: getProjectColor(run.project, projectColors)
+      projectColor: getProjectColor(run.project, projectColors) ?? ""
     });
   }
 
@@ -2594,7 +2597,7 @@ export function WeekPlanner() {
       customerDeadline: run.customerDeadline ? formatDateTimeInputDate(run.customerDeadline) : "",
       date: formatDateInput(nextWorkday),
       printerId: run.printerId,
-      projectColor: getProjectColor(run.project, projectColors),
+      projectColor: getProjectColor(run.project, projectColors) ?? "",
       productId: run.productId,
       project: run.project,
       status: "reprint",
@@ -2617,14 +2620,17 @@ export function WeekPlanner() {
   }
 
   function getCardActions(run: PrintRun, actions: string[], isPast: boolean) {
+    if (run.status === "printing") {
+      return ["edit", ...actions];
+    }
+
     if (isPast) {
       return run.status === "failed" ? ["edit", "reschedule"] : ["edit"];
     }
 
     if (
       run.status === "planned" ||
-      run.status === "reprint" ||
-      run.status === "printing"
+      run.status === "reprint"
     ) {
       return ["edit", ...actions];
     }
@@ -3431,11 +3437,38 @@ export function WeekPlanner() {
 
             <label>
               <span>project color</span>
-              <input
-                type="color"
-                value={newPrint.projectColor}
-                onChange={(event) => updateNewPrint("projectColor", event.target.value)}
-              />
+              <div className="project-color-field">
+                {newPrint.projectColor ? (
+                  <>
+                    <input
+                      type="color"
+                      value={newPrint.projectColor}
+                      onChange={(event) => updateNewPrint("projectColor", event.target.value)}
+                    />
+                    <button
+                      className="mini-edit-pill clear-field-button"
+                      onClick={() => updateNewPrint("projectColor", "")}
+                      type="button"
+                    >
+                      clear
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="mini-edit-pill add-color-button"
+                    onClick={() =>
+                      updateNewPrint(
+                        "projectColor",
+                        projectColors[getProjectKey(newPrint.project)] ??
+                          getFallbackProjectColor(newPrint.project)
+                      )
+                    }
+                    type="button"
+                  >
+                    add color
+                  </button>
+                )}
+              </div>
             </label>
 
             <label>
@@ -3573,11 +3606,38 @@ export function WeekPlanner() {
 
             <label>
               <span>project color</span>
-              <input
-                type="color"
-                value={editPrint.projectColor}
-                onChange={(event) => updateEditPrint("projectColor", event.target.value)}
-              />
+              <div className="project-color-field">
+                {editPrint.projectColor ? (
+                  <>
+                    <input
+                      type="color"
+                      value={editPrint.projectColor}
+                      onChange={(event) => updateEditPrint("projectColor", event.target.value)}
+                    />
+                    <button
+                      className="mini-edit-pill clear-field-button"
+                      onClick={() => updateEditPrint("projectColor", "")}
+                      type="button"
+                    >
+                      clear
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="mini-edit-pill add-color-button"
+                    onClick={() =>
+                      updateEditPrint(
+                        "projectColor",
+                        projectColors[getProjectKey(editPrint.project)] ??
+                          getFallbackProjectColor(editPrint.project)
+                      )
+                    }
+                    type="button"
+                  >
+                    add color
+                  </button>
+                )}
+              </div>
             </label>
 
             <label>

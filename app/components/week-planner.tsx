@@ -40,6 +40,7 @@ const MAX_WEEK_OFFSET = 4;
 const HOURS = Array.from({ length: DAY_HOURS }, (_, hour) => hour);
 const HOUR_LINES = Array.from({ length: DAY_HOURS + 1 }, (_, hour) => hour);
 const DEFAULT_SHIPPING_BOX_TYPE: ShippingBoxType = "50x50x50";
+type ShippingBoxStock = Record<string, number>;
 const PROJECT_STAGES: Array<{
   id: ProjectStage;
   label: string;
@@ -254,6 +255,19 @@ type NewMaterialForm = {
   type: string;
 };
 
+function isBoxLikeMaterial(material: CustomMaterial) {
+  const displayMaterial = getCustomMaterialDisplay(material);
+  const label = `${displayMaterial.type} ${displayMaterial.specification}`.toLowerCase();
+
+  return label.includes("box") || label.includes("boxes") || /\d+x\d+x\d+/.test(label);
+}
+
+function getCustomMaterialBoxLabel(material: CustomMaterial) {
+  const displayMaterial = getCustomMaterialDisplay(material);
+
+  return displayMaterial.specification.trim() || displayMaterial.type.trim();
+}
+
 const materialNameHints = [
   "bubble",
   "paper",
@@ -361,7 +375,7 @@ type NewProductForm = {
   name: string;
   pelletUsageKg: string;
   printDurationHours: string;
-  shippingBoxType: ShippingBoxType;
+  shippingBoxType: string;
 };
 
 type NewProjectForm = {
@@ -546,12 +560,20 @@ function getProductStyleWithProject(
 }
 
 function normalizeShippingBoxStock(stock?: Record<string, number>) {
-  return shippingBoxTypes.reduce(
+  const normalizedStock = shippingBoxTypes.reduce(
     (nextStock, boxType) => ({
       ...nextStock,
       [boxType]: Math.max(Number(stock?.[boxType] ?? shippingBoxInventory[boxType] ?? 0), 0)
     }),
-    {} as Record<ShippingBoxType, number>
+    {} as ShippingBoxStock
+  );
+
+  return Object.entries(stock ?? {}).reduce<ShippingBoxStock>(
+    (nextStock, [boxType, count]) => ({
+      ...nextStock,
+      [boxType]: Math.max(Number(count) || 0, 0)
+    }),
+    normalizedStock
   );
 }
 
@@ -1917,6 +1939,14 @@ export function WeekPlanner() {
   const reorderMessage = reorderDate
     ? `reorder by ${formatCompactDate(reorderDate)} to avoid delays`
     : "no reorder needed next 2 weeks";
+  const availableShippingBoxTypes = useMemo(() => {
+    const customBoxTypes = customMaterials
+      .filter(isBoxLikeMaterial)
+      .map(getCustomMaterialBoxLabel)
+      .filter(Boolean);
+
+    return [...new Set([...shippingBoxTypes, ...customBoxTypes])];
+  }, [customMaterials]);
   const lowShippingBoxes = shippingBoxTypes.filter(
     (boxType) => shippingBoxStock[boxType] < 2
   );
@@ -2403,6 +2433,28 @@ export function WeekPlanner() {
     showSavedNotice();
   }
 
+  function subtractShippingBox(product: Product) {
+    if (shippingBoxTypes.includes(product.shippingBoxType as ShippingBoxType)) {
+      setShippingBoxStock((current) => ({
+        ...current,
+        [product.shippingBoxType]: Math.max((current[product.shippingBoxType] ?? 0) - 1, 0)
+      }));
+      return;
+    }
+
+    setCustomMaterials((current) =>
+      current.map((material) =>
+        isBoxLikeMaterial(material) &&
+        getCustomMaterialBoxLabel(material) === product.shippingBoxType
+          ? {
+              ...material,
+              count: Math.max(material.count - 1, 0)
+            }
+          : material
+      )
+    );
+  }
+
   function requestDeleteCustomMaterial(material: CustomMaterial) {
     setPendingDelete({
       kind: "material",
@@ -2763,7 +2815,7 @@ export function WeekPlanner() {
                 field === "name"
                   ? value.toLowerCase()
                   : field === "shippingBoxType"
-                    ? (value as ShippingBoxType)
+                    ? value
                   : Math.max(Number(value) || 0, 0)
             }
           : product
@@ -3333,10 +3385,7 @@ export function WeekPlanner() {
         adjustManualProductStock(new Map([[product.id, 1]]), "add");
       }
 
-      setShippingBoxStock((current) => ({
-        ...current,
-        [product.shippingBoxType]: Math.max((current[product.shippingBoxType] ?? 0) - 1, 0)
-      }));
+      subtractShippingBox(product);
     }
 
     setRuns((current) =>
@@ -4372,8 +4421,7 @@ export function WeekPlanner() {
             <label>
               <span>start date</span>
               <input
-                inputMode="numeric"
-                placeholder="yyyy-mm-dd"
+                type="date"
                 value={newPrint.date}
                 onChange={(event) => updateNewPrint("date", event.target.value)}
               />
@@ -4392,8 +4440,7 @@ export function WeekPlanner() {
               <span>deadline</span>
               <div className="clearable-field">
                 <input
-                  inputMode="numeric"
-                  placeholder="yyyy-mm-dd"
+                  type="date"
                   value={newPrint.customerDeadline}
                   onChange={(event) => updateNewPrint("customerDeadline", event.target.value)}
                 />
@@ -6037,11 +6084,11 @@ export function WeekPlanner() {
                   onChange={(event) =>
                     setNewProduct((current) => ({
                       ...current,
-                      shippingBoxType: event.target.value as ShippingBoxType
+                      shippingBoxType: event.target.value
                     }))
                   }
                 >
-                  {shippingBoxTypes.map((boxType) => (
+                  {availableShippingBoxTypes.map((boxType) => (
                     <option key={boxType} value={boxType}>
                       {boxType}
                     </option>
@@ -6127,7 +6174,7 @@ export function WeekPlanner() {
                           updateProductData(product.id, "shippingBoxType", event.target.value)
                         }
                       >
-                        {shippingBoxTypes.map((boxType) => (
+                        {availableShippingBoxTypes.map((boxType) => (
                           <option key={boxType} value={boxType}>
                             {boxType}
                           </option>

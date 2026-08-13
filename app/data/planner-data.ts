@@ -15,7 +15,7 @@ export type Product = {
   pelletUsageKg: number;
   color: string;
   borderColor: string;
-  shippingBoxType: ShippingBoxType;
+  shippingBoxType: string;
   isEstimated?: boolean;
 };
 

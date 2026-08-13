@@ -523,7 +523,7 @@ h2 {
 
 .print-composer-form > button[type="submit"] {
   align-self: start;
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .composer-heading {
@@ -533,7 +533,7 @@ h2 {
   justify-content: flex-end;
   position: absolute;
   right: 16px;
-  top: 16px;
+  top: 29px;
   z-index: 2;
 }
 
@@ -630,8 +630,8 @@ h2 {
   cursor: pointer;
   height: 38px;
   min-height: 38px;
-  padding: 0;
-  width: 38px;
+  padding: 2px;
+  width: 100%;
 }
 
 .project-color-input.is-empty {
@@ -1427,16 +1427,18 @@ h2 {
 }
 
 .print-card.is-continuation {
+  border-top: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  height: calc((var(--duration-hours) * var(--hour-height)) - 4px);
+  height: calc(var(--duration-hours) * var(--hour-height));
   top: calc(var(--start-hour) * var(--hour-height));
 }
 
 .print-card.continues-after {
+  border-bottom: 0;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  height: calc((var(--duration-hours) * var(--hour-height)) - 4px);
+  height: calc(var(--duration-hours) * var(--hour-height));
 }
 
 .print-card.is-continuation.continues-after {

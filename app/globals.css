@@ -145,7 +145,7 @@ select:focus-visible {
 }
 
 .view-toggle button {
-  background: var(--surface);
+  background: var(--background);
   border: 1px solid #60675d;
   color: #60675d;
   cursor: pointer;
@@ -154,6 +154,10 @@ select:focus-visible {
   height: 100%;
   min-height: 0;
   padding: 0 12px;
+}
+
+.view-toggle button + button {
+  margin-left: -1px;
 }
 
 .view-toggle button.is-active {

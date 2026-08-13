@@ -312,8 +312,14 @@ type NewProjectForm = {
   title: string;
 };
 
+type ProjectEditProduct = {
+  productId: Product["id"];
+  runId: string;
+};
+
 type ProjectEditForm = {
   color: string;
+  products: ProjectEditProduct[];
   title: string;
 };
 
@@ -1510,6 +1516,7 @@ export function WeekPlanner() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectEdit, setProjectEdit] = useState<ProjectEditForm>({
     color: "",
+    products: [],
     title: ""
   });
   const [newPrint, setNewPrint] = useState<NewPrintForm>(() =>
@@ -2090,6 +2097,10 @@ export function WeekPlanner() {
     setEditingProjectId(project.id);
     setProjectEdit({
       color: getProjectColor(project.project, projectColors) ?? "",
+      products: project.runs.map((entry) => ({
+        productId: entry.run.productId,
+        runId: entry.run.id
+      })),
       title: project.project
     });
   }
@@ -2098,8 +2109,18 @@ export function WeekPlanner() {
     setEditingProjectId(null);
     setProjectEdit({
       color: "",
+      products: [],
       title: ""
     });
+  }
+
+  function updateProjectEditProduct(runId: string, productId: Product["id"]) {
+    setProjectEdit((current) => ({
+      ...current,
+      products: current.products.map((entry) =>
+        entry.runId === runId ? { ...entry, productId } : entry
+      )
+    }));
   }
 
   function saveProjectEdit(event: FormEvent<HTMLFormElement>) {
@@ -2117,16 +2138,22 @@ export function WeekPlanner() {
     }
 
     const previousProjectKey = editingProjectId;
+    const nextProductsByRunId = new Map(
+      projectEdit.products.map((entry) => [entry.runId, entry.productId])
+    );
 
     setRuns((current) =>
-      current.map((run) =>
-        getProjectKey(run.project) === previousProjectKey
-          ? {
-              ...run,
-              project: nextProject
-            }
-          : run
-      )
+      current.map((run) => {
+        if (getProjectKey(run.project) !== previousProjectKey) {
+          return run;
+        }
+
+        return {
+          ...run,
+          productId: nextProductsByRunId.get(run.id) ?? run.productId,
+          project: nextProject
+        };
+      })
     );
 
     setTimelineEvents((current) =>
@@ -4745,6 +4772,42 @@ export function WeekPlanner() {
                                   />
                                 </div>
                               </label>
+                              <div className="project-edit-products">
+                                <span>prints</span>
+                                {project.runs.map((entry) => {
+                                  const editedProductId =
+                                    projectEdit.products.find(
+                                      (productEntry) => productEntry.runId === entry.run.id
+                                    )?.productId ?? entry.run.productId;
+
+                                  return (
+                                    <label
+                                      className="project-edit-product-row"
+                                      key={entry.run.id}
+                                    >
+                                      <small>
+                                        {formatCompactDate(entry.start)}{" "}
+                                        {formatTime(entry.start)}-{formatTime(entry.end)}
+                                      </small>
+                                      <select
+                                        value={editedProductId}
+                                        onChange={(event) =>
+                                          updateProjectEditProduct(
+                                            entry.run.id,
+                                            event.target.value
+                                          )
+                                        }
+                                      >
+                                        {visibleProducts.map((product) => (
+                                          <option key={product.id} value={product.id}>
+                                            {product.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  );
+                                })}
+                              </div>
                               <div className="project-edit-actions">
                                 <button
                                   className="mini-edit-pill project-remove-button"

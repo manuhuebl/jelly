@@ -604,10 +604,13 @@ h2 {
 }
 
 .month-edit-pill,
-.material-edit-pill,
 .stock-edit-button,
 .product-edit-button,
-.product-add-button,
+.product-add-button {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.material-edit-pill,
 .box-add-pill {
   background: rgba(31, 31, 29, 0.06);
 }
@@ -1966,7 +1969,7 @@ h2 {
 
 .project-column-heading span {
   align-items: center;
-  background: transparent;
+  background: transparent !important;
   border: 1px solid var(--line);
   border-radius: 50% !important;
   color: var(--ink);
@@ -2086,6 +2089,13 @@ h2 {
   line-height: 1.1;
 }
 
+.kanban-project-summary small:not(.kanban-project-status) {
+  color: var(--ink);
+  display: block;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
 .kanban-run-list {
   display: grid;
   gap: 6px;
@@ -2168,7 +2178,23 @@ h2 {
 }
 
 .kanban-edit-actions {
+  align-items: center;
+  display: flex;
+  gap: 6px;
   grid-column: 1 / -1;
+}
+
+.kanban-edit-actions .project-remove-button {
+  height: 20px;
+  min-height: 20px;
+  padding: 2px 7px;
+}
+
+.kanban-edit-actions .icon-button {
+  background-size: 7px;
+  height: 17px;
+  min-height: 17px;
+  width: 17px;
 }
 
 .material-card .material-amount {

@@ -740,11 +740,13 @@ h2 {
 }
 
 .material-heading {
+  border-bottom: 1px solid var(--line-soft);
   display: block;
+  padding-bottom: 12px;
 }
 
 .material-heading .eyebrow {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .material-stock-edit {
@@ -1839,6 +1841,12 @@ h2 {
   margin-bottom: 10px;
 }
 
+.project-overview > .eyebrow {
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 0;
+  padding-bottom: 12px;
+}
+
 .project-list {
   align-items: start;
   display: grid;
@@ -2200,6 +2208,11 @@ h2 {
   padding: 12px;
 }
 
+.product-inventory .section-heading {
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 12px;
+}
+
 .stock-list {
   margin-top: 12px;
 }
@@ -2297,7 +2310,7 @@ h2 {
   display: inline-block;
   flex: 0 0 auto;
   height: 10px;
-  opacity: 0.58;
+  opacity: 1;
   width: 10px;
 }
 

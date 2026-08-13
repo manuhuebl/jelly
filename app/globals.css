@@ -151,7 +151,7 @@ select:focus-visible {
   color: var(--ink-muted);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   height: 100%;
   min-height: 0;
   padding: 0 12px;
@@ -236,7 +236,7 @@ h2 {
 .card-pill-button,
 .mobile-edit-button {
   align-items: center;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(31, 31, 29, 0.08);
   border: 0;
   border-radius: 999px;
   color: var(--ink);
@@ -1171,27 +1171,10 @@ h2 {
   font-size: 10px;
 }
 
-.month-print-chip .month-printer-pill {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.2);
-  border: 0;
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 8px;
-  height: 14px;
-  justify-content: center;
-  line-height: 1;
-  min-width: 14px;
-  padding: 2px 5px;
+.month-edit-pill {
   position: absolute;
   right: 5px;
   top: 5px;
-}
-
-.month-edit-pill {
-  bottom: 5px;
-  position: absolute;
-  right: 5px;
 }
 
 .month-day-events {
@@ -1467,6 +1450,8 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 999px;
   height: 8px;
+  margin-left: -2px;
+  margin-right: -2px;
   margin-top: 17px;
   overflow: hidden;
 }
@@ -1580,8 +1565,7 @@ h2 {
 .print-card.is-failed .card-topline strong,
 .print-card.is-failed .card-topline button,
 .print-card.is-failed .card-actions button,
-.mobile-print-card.is-failed .mobile-edit-button,
-.month-print-chip.is-failed .month-printer-pill {
+.mobile-print-card.is-failed .mobile-edit-button {
   background: rgba(255, 255, 255, 0.3);
   color: var(--surface);
 }
@@ -1956,7 +1940,7 @@ h2 {
   align-items: center;
   color: var(--ink);
   display: flex;
-  font-size: 12px;
+  font-size: 13px;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
   margin-left: -8px;
@@ -1973,8 +1957,9 @@ h2 {
 
 .project-column-heading span {
   align-items: center;
-  background: var(--surface);
+  background: rgba(31, 31, 29, 0.08);
   border: 0;
+  border-radius: 50% !important;
   color: var(--ink);
   display: inline-flex;
   height: 24px;
@@ -3157,7 +3142,6 @@ h2 {
 .assignee-pill,
 .card-topline .assignee-pill,
 .mobile-print-card .assignee-pill,
-.month-printer-pill,
 .project-column-heading span,
 .printer-toggle button {
   align-items: center;
@@ -3175,7 +3159,6 @@ h2 {
   width: 18px;
 }
 
-.month-printer-pill,
 .project-column-heading span,
 .printer-toggle button {
   height: 24px;

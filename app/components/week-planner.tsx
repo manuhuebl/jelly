@@ -1910,7 +1910,7 @@ export function WeekPlanner() {
     ? timelineEvents.find((event) => event.id === selectedEventId)
     : null;
   const canSaveEventEdit = Boolean(selectedEvent && editEvent?.title.trim());
-  const canSaveDeadlineEdit = Boolean(selectedDeadline && editDeadlineDate);
+  const canSaveDeadlineEdit = Boolean(selectedDeadline);
   const timelineEntries = getTimelineEntries(runs, timelineEvents, weekStart, productById);
   const timelineBoardStyle: TimelineBoardStyle = {
     "--timeline-board-height": `${Math.max(86, timelineEntries.length * 28 + 18)}px`
@@ -3049,12 +3049,14 @@ export function WeekPlanner() {
   function saveDeadlineEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!selectedDeadline || !editDeadlineDate) {
+    if (!selectedDeadline) {
       return;
     }
 
     const selectedProjectKey = getProjectKey(selectedDeadline.project);
-    const nextDeadline = buildStartDateTime(editDeadlineDate, "18:00");
+    const nextDeadline = editDeadlineDate
+      ? buildStartDateTime(editDeadlineDate, "18:00")
+      : undefined;
 
     setRuns((current) =>
       current.map((run) =>
@@ -3067,21 +3069,29 @@ export function WeekPlanner() {
       )
     );
     setTimelineEvents((current) =>
-      current.map((event) => {
-        const project =
-          event.deadlineProject ?? event.title.replace(/^deadline\s+/i, "").trim();
-        const projectKey = getProjectKey(project);
+      current
+        .map((event) => {
+          const project =
+            event.deadlineProject ?? event.title.replace(/^deadline\s+/i, "").trim();
+          const projectKey = getProjectKey(project);
 
-        return event.type === "deadline" && projectKey === selectedProjectKey
-          ? {
-              ...event,
-              deadlineProject: project,
-              endDateTime: buildStartDateTime(editDeadlineDate, "22:00"),
-              startDateTime: buildStartDateTime(editDeadlineDate, "18:00"),
-              title: `deadline ${project}`
-            }
-          : event;
-      })
+          if (event.type !== "deadline" || projectKey !== selectedProjectKey) {
+            return event;
+          }
+
+          if (!nextDeadline) {
+            return null;
+          }
+
+          return {
+            ...event,
+            deadlineProject: project,
+            endDateTime: buildStartDateTime(editDeadlineDate, "22:00"),
+            startDateTime: nextDeadline,
+            title: `deadline ${project}`
+          };
+        })
+        .filter((event): event is TimelineEvent => Boolean(event))
     );
     setSelectedDeadline(null);
     setEditDeadlineDate("");
@@ -4816,12 +4826,23 @@ export function WeekPlanner() {
               </label>
               <label>
                 <span>deadline</span>
-                <input
-                  autoFocus
-                  type="date"
-                  value={editDeadlineDate}
-                  onChange={(event) => setEditDeadlineDate(event.target.value)}
-                />
+                <div className="clearable-field">
+                  <input
+                    autoFocus
+                    type="date"
+                    value={editDeadlineDate}
+                    onChange={(event) => setEditDeadlineDate(event.target.value)}
+                  />
+                  {editDeadlineDate ? (
+                    <button
+                      className="mini-edit-pill clear-field-button"
+                      onClick={() => setEditDeadlineDate("")}
+                      type="button"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
               </label>
               <button disabled={!canSaveDeadlineEdit} type="submit">
                 Save
@@ -5159,10 +5180,6 @@ export function WeekPlanner() {
                             {monthDeadline ? (
                               <small>by {formatCompactDate(monthDeadline)}</small>
                             ) : null}
-                            <small className="month-printer-pill">
-                              {printers.find((printer) => printer.id === entry.run.printerId)
-                                ?.name ?? "1"}
-                            </small>
                             <button
                               className="mini-edit-pill month-edit-pill"
                               onClick={() => openEditPanel(entry.run)}

@@ -1035,6 +1035,7 @@ h2 {
 .month-view {
   display: grid;
   gap: 6px;
+  position: relative;
 }
 
 .month-view-heading {
@@ -1042,7 +1043,11 @@ h2 {
   display: flex;
   gap: 12px;
   justify-content: space-between;
-  min-height: 30px;
+  inset: 0 0 auto;
+  min-height: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
 }
 
 .month-view-heading h2 {
@@ -1062,15 +1067,20 @@ h2 {
   cursor: pointer;
   height: 30px;
   padding: 0;
+  pointer-events: auto;
+  position: absolute;
+  top: -36px;
   width: 34px;
 }
 
 .month-arrow.is-left {
   background-image: url("/icons/pfeil-links.svg");
+  left: 0;
 }
 
 .month-arrow.is-right {
   background-image: url("/icons/pfeil-rechts.svg");
+  right: 0;
 }
 
 .month-weekdays,

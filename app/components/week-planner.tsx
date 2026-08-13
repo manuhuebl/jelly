@@ -157,6 +157,11 @@ type PendingUndoMove = {
   previousRun: PrintRun;
 };
 
+type PendingUndoKanbanMove = {
+  previousStage?: ProjectStage;
+  runId: string;
+};
+
 type ViewMode = "week" | "month";
 type ProjectStage = "planned" | "printing" | "ready" | "packed" | "shipped";
 
@@ -1058,10 +1063,6 @@ function getRunStage(
   const automaticStage = getAutomaticRunStage(entry, now);
   const manualStage = manualStages[entry.run.id];
 
-  if (automaticStage === "printing") {
-    return "printing";
-  }
-
   if (manualStage) {
     return manualStage;
   }
@@ -1730,6 +1731,8 @@ export function WeekPlanner() {
   const [showBoxPopup, setShowBoxPopup] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [pendingUndoMove, setPendingUndoMove] = useState<PendingUndoMove | null>(null);
+  const [pendingUndoKanbanMove, setPendingUndoKanbanMove] =
+    useState<PendingUndoKanbanMove | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [pendingPastAction, setPendingPastAction] = useState<PendingPastAction | null>(null);
   const [pendingFreeSpotAction, setPendingFreeSpotAction] =
@@ -2089,7 +2092,10 @@ export function WeekPlanner() {
     }, 1400);
   }
 
-  function savePlannerSnapshot(nextRuns: PrintRun[]) {
+  function savePlannerSnapshot(
+    nextRuns: PrintRun[],
+    overrides: Partial<StoredPlannerState> = {}
+  ) {
     const state: StoredPlannerState = {
       customMaterials,
       hiddenProjectIds: [...hiddenProjectIds],
@@ -2103,7 +2109,8 @@ export function WeekPlanner() {
       shippingBoxStock,
       shippedInventoryProjectIds: [...shippedInventoryProjectIds],
       shippedInventoryRunIds: [...shippedInventoryRunIds],
-      timelineEvents
+      timelineEvents,
+      ...overrides
     };
 
     savePlannerState(state, remoteUpdatedAtRef.current)
@@ -3382,6 +3389,7 @@ export function WeekPlanner() {
       return nextRuns;
     });
     setPendingUndoMove({ previousRun: run });
+    setPendingUndoKanbanMove(null);
 
     if (selectedRunId === run.id) {
       setEditPrint({
@@ -3432,6 +3440,28 @@ export function WeekPlanner() {
       return nextRuns;
     });
     setPendingUndoMove(null);
+    setNotice(null);
+  }
+
+  function undoLastKanbanMove() {
+    if (!pendingUndoKanbanMove) {
+      return;
+    }
+
+    const { previousStage, runId } = pendingUndoKanbanMove;
+    const nextManualStages = {
+      ...manualRunStages
+    };
+
+    if (previousStage) {
+      nextManualStages[runId] = previousStage;
+    } else {
+      delete nextManualStages[runId];
+    }
+
+    setManualRunStages(nextManualStages);
+    savePlannerSnapshot(runs, { manualRunStages: nextManualStages });
+    setPendingUndoKanbanMove(null);
     setNotice(null);
   }
 
@@ -3776,6 +3806,7 @@ export function WeekPlanner() {
     event.preventDefault();
     event.stopPropagation();
     nativeDragRef.current = null;
+    setDragState(null);
 
     const runEntry = kanbanRows.find((entry) => entry.run.id === dragMeta.runId);
 
@@ -3783,39 +3814,64 @@ export function WeekPlanner() {
       return;
     }
 
+    const currentStage = getRunStage(runEntry, manualRunStages, now);
+    const previousStage = manualRunStages[dragMeta.runId];
+
+    if (currentStage === stage) {
+      return;
+    }
+
     const productCounts = new Map<Product["id"], number>([[runEntry.product.id, 1]]);
     const wasShipped = shippedInventoryRunIds.has(dragMeta.runId);
     const willBeShipped = stage === "shipped";
+    let nextShippedRunIds = new Set(shippedInventoryRunIds);
 
     if (willBeShipped && !wasShipped && runEntry.run.status === "finished") {
       adjustManualProductStock(productCounts, "subtract");
-
-      setShippedInventoryRunIds((current) => {
-        const next = new Set(current);
-        next.add(dragMeta.runId);
-        return next;
-      });
+      nextShippedRunIds = new Set(nextShippedRunIds);
+      nextShippedRunIds.add(dragMeta.runId);
+      setShippedInventoryRunIds(nextShippedRunIds);
     }
 
     if (!willBeShipped && wasShipped) {
       adjustManualProductStock(productCounts, "add");
-
-      setShippedInventoryRunIds((current) => {
-        const next = new Set(current);
-        next.delete(dragMeta.runId);
-        return next;
-      });
+      nextShippedRunIds = new Set(nextShippedRunIds);
+      nextShippedRunIds.delete(dragMeta.runId);
+      setShippedInventoryRunIds(nextShippedRunIds);
     }
 
-    setManualRunStages((current) => {
-      const next = {
-        ...current
-      };
+    const nextManualStages = {
+      ...manualRunStages,
+      [dragMeta.runId]: stage
+    };
 
-      next[dragMeta.runId] = stage;
-
-      return next;
+    setManualRunStages(nextManualStages);
+    setPendingUndoMove(null);
+    setPendingUndoKanbanMove({
+      previousStage,
+      runId: dragMeta.runId
     });
+    savePlannerSnapshot(runs, {
+      manualRunStages: nextManualStages,
+      shippedInventoryRunIds: [...nextShippedRunIds]
+    });
+
+    const nextNotice: Notice = {
+      title: "Print moved",
+      body: `${runEntry.product.name} moved to ${PROJECT_STAGES.find(
+        (entry) => entry.id === stage
+      )?.label.toLowerCase()}.`,
+      tone: "neutral"
+    };
+
+    setNotice(nextNotice);
+
+    window.setTimeout(() => {
+      setNotice((current) => (current === nextNotice ? null : current));
+      setPendingUndoKanbanMove((current) =>
+        current?.runId === dragMeta.runId ? null : current
+      );
+    }, 5000);
   }
 
   if (!isPlannerLoaded) {
@@ -3912,11 +3968,16 @@ export function WeekPlanner() {
             onClick={() => {
               setNotice(null);
               setPendingUndoMove(null);
+              setPendingUndoKanbanMove(null);
             }}
             type="button"
           />
-          {pendingUndoMove ? (
-            <button className="ghost-action undo-action" onClick={undoLastMove} type="button">
+          {pendingUndoMove || pendingUndoKanbanMove ? (
+            <button
+              className="ghost-action undo-action"
+              onClick={pendingUndoMove ? undoLastMove : undoLastKanbanMove}
+              type="button"
+            >
               undo
             </button>
           ) : null}

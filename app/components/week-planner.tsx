@@ -213,6 +213,11 @@ type PendingDelete =
       eventId: string;
       kind: "event";
       label: string;
+    }
+  | {
+      kind: "material";
+      label: string;
+      materialId: string;
     };
 
 type PendingPastAction =
@@ -2355,6 +2360,14 @@ export function WeekPlanner() {
     showSavedNotice();
   }
 
+  function requestDeleteCustomMaterial(material: CustomMaterial) {
+    setPendingDelete({
+      kind: "material",
+      label: `${material.count} ${material.type}`,
+      materialId: material.id
+    });
+  }
+
   function toggleProject(projectId: string) {
     setExpandedProjectIds((current) => {
       const next = new Set(current);
@@ -3211,7 +3224,7 @@ export function WeekPlanner() {
         setSelectedRunId(null);
         setEditPrint(null);
       }
-    } else {
+    } else if (pendingDelete.kind === "event") {
       setTimelineEvents((current) =>
         current.filter((event) => event.id !== pendingDelete.eventId)
       );
@@ -3219,6 +3232,14 @@ export function WeekPlanner() {
       if (selectedEventId === pendingDelete.eventId) {
         setSelectedEventId(null);
         setEditEvent(null);
+      }
+    } else {
+      setCustomMaterials((current) =>
+        current.filter((material) => material.id !== pendingDelete.materialId)
+      );
+
+      if (editingCustomMaterialId === pendingDelete.materialId) {
+        cancelCustomMaterialEdit();
       }
     }
 
@@ -5694,53 +5715,64 @@ export function WeekPlanner() {
               <article className="shipping-box-row" key={material.id}>
                 {editingCustomMaterialId === material.id ? (
                   <form className="custom-material-edit" onSubmit={saveCustomMaterialEdit}>
-                    <input
-                      aria-label="Material count"
-                      min="0"
-                      type="number"
-                      value={customMaterialEdit.count}
-                      onChange={(event) =>
-                        setCustomMaterialEdit((current) => ({
-                          ...current,
-                          count: event.target.value
-                        }))
-                      }
-                    />
-                    <input
-                      aria-label="Material type"
-                      value={customMaterialEdit.type}
-                      onChange={(event) =>
-                        setCustomMaterialEdit((current) => ({
-                          ...current,
-                          type: event.target.value
-                        }))
-                      }
-                    />
-                    <input
-                      aria-label="Material specification"
-                      value={customMaterialEdit.specification}
-                      onChange={(event) =>
-                        setCustomMaterialEdit((current) => ({
-                          ...current,
-                          specification: event.target.value
-                        }))
-                      }
-                    />
-                    <button
-                      disabled={
-                        !customMaterialEdit.type.trim() ||
-                        !customMaterialEdit.specification.trim()
-                      }
-                      type="submit"
-                    >
-                      save
-                    </button>
-                    <button
-                      aria-label="Cancel material edit"
-                      className="icon-button"
-                      onClick={cancelCustomMaterialEdit}
-                      type="button"
-                    />
+                    <div className="custom-material-edit-fields">
+                      <input
+                        aria-label="Material count"
+                        min="0"
+                        type="number"
+                        value={customMaterialEdit.count}
+                        onChange={(event) =>
+                          setCustomMaterialEdit((current) => ({
+                            ...current,
+                            count: event.target.value
+                          }))
+                        }
+                      />
+                      <input
+                        aria-label="Material type"
+                        value={customMaterialEdit.type}
+                        onChange={(event) =>
+                          setCustomMaterialEdit((current) => ({
+                            ...current,
+                            type: event.target.value
+                          }))
+                        }
+                      />
+                      <input
+                        aria-label="Material specification"
+                        value={customMaterialEdit.specification}
+                        onChange={(event) =>
+                          setCustomMaterialEdit((current) => ({
+                            ...current,
+                            specification: event.target.value
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="custom-material-edit-actions">
+                      <button
+                        disabled={
+                          !customMaterialEdit.type.trim() ||
+                          !customMaterialEdit.specification.trim()
+                        }
+                        type="submit"
+                      >
+                        save
+                      </button>
+                      <button
+                        className="mini-edit-pill custom-material-delete"
+                        onClick={() => requestDeleteCustomMaterial(material)}
+                        type="button"
+                      >
+                        delete
+                      </button>
+                      <button
+                        aria-label="Cancel material edit"
+                        className="icon-button"
+                        onClick={cancelCustomMaterialEdit}
+                        type="button"
+                      />
+                    </div>
                   </form>
                 ) : (
                   <>

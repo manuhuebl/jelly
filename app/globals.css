@@ -925,7 +925,34 @@ h2 {
 }
 
 .shipping-box-row .custom-material-edit {
-  grid-template-columns: 58px minmax(0, 1fr) minmax(0, 1fr) auto auto;
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+
+.custom-material-edit-fields {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 58px 1fr;
+}
+
+.custom-material-edit-fields input:last-child {
+  grid-column: 1 / -1;
+}
+
+.custom-material-edit-actions {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.custom-material-edit-actions .icon-button {
+  margin-left: auto;
+}
+
+.custom-material-delete {
+  color: var(--ink);
 }
 
 .shipping-box-row input {

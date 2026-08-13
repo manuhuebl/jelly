@@ -463,7 +463,7 @@ function getProductStyleWithProject(
 ): ProductStyle {
   return {
     ...getProductStyle(product),
-    "--project-color": getProjectColor(project, projectColors) ?? "transparent"
+    "--project-color": getProjectColor(project, projectColors) ?? "#1f1f1d"
   };
 }
 
@@ -3433,7 +3433,7 @@ export function WeekPlanner() {
         <img className="brand-logo" src="/logo/logo.png" alt="jelly" />
         {viewToggle}
         <button className="primary-action" onClick={openNewPrintForm} type="button">
-          + Print
+          + print
         </button>
       </header>
 
@@ -4555,7 +4555,7 @@ export function WeekPlanner() {
               }}
               type="button"
             >
-              + Create event
+              + create event
             </button>
           </div>
           <div className="timeline-row">
@@ -4986,7 +4986,7 @@ export function WeekPlanner() {
               onClick={() => setIsMaterialCreateOpen(true)}
               type="button"
             >
-              + Material
+              + material
             </button>
           </div>
           {isMaterialCreateOpen ? (
@@ -5104,7 +5104,7 @@ export function WeekPlanner() {
             }}
             type="button"
           >
-            + Product
+            + product
           </button>
         </summary>
         <div className="drawer-grid">

@@ -44,11 +44,11 @@ const PROJECT_STAGES: Array<{
   id: ProjectStage;
   label: string;
 }> = [
-  { id: "planned", label: "planned" },
-  { id: "printing", label: "printing" },
-  { id: "ready", label: "ready to pack" },
-  { id: "packed", label: "packed" },
-  { id: "shipped", label: "shipped" }
+  { id: "planned", label: "Planned" },
+  { id: "printing", label: "Printing" },
+  { id: "ready", label: "Ready to pack" },
+  { id: "packed", label: "Packed" },
+  { id: "shipped", label: "Shipped" }
 ];
 
 function getVisibleProducts(productList: Product[]) {
@@ -4708,6 +4708,11 @@ export function WeekPlanner() {
                 {projectRowsByStage[stage.id].map((project) => {
                   const isExpanded = expandedProjectIds.has(project.id);
                   const projectColor = getProjectColor(project.project, projectColors);
+                  const sortedProjectRuns = [...project.runs].sort(
+                    (a, b) =>
+                      a.product.name.localeCompare(b.product.name) ||
+                      a.start.getTime() - b.start.getTime()
+                  );
 
                   return (
                     <article
@@ -4784,8 +4789,8 @@ export function WeekPlanner() {
                                 </div>
                               </label>
                               <div className="project-edit-products">
-                                <span>prints</span>
-                                {project.runs.map((entry) => {
+                                <span>products</span>
+                                {sortedProjectRuns.map((entry, entryIndex) => {
                                   const editedProductId =
                                     projectEdit.products.find(
                                       (productEntry) => productEntry.runId === entry.run.id
@@ -4796,10 +4801,7 @@ export function WeekPlanner() {
                                       className="project-edit-product-row"
                                       key={entry.run.id}
                                     >
-                                      <small>
-                                        {formatCompactDate(entry.start)}{" "}
-                                        {formatTime(entry.start)}-{formatTime(entry.end)}
-                                      </small>
+                                      <small>Product {entryIndex + 1}</small>
                                       <select
                                         value={editedProductId}
                                         onChange={(event) =>
@@ -4835,44 +4837,47 @@ export function WeekPlanner() {
                                 />
                               </div>
                             </form>
-                          ) : null}
-                          {project.runs.length === 0 ? (
-                            <span>no prints yet</span>
                           ) : (
-                            project.runs.map((entry) => (
-                              <span
-                                className={`project-detail-row ${
-                                  entry.run.status === "finished" ? "is-done" : ""
-                                }`}
-                                key={entry.run.id}
-                              >
-                                <span className="project-detail-copy">
-                                  <strong>{entry.product.name}</strong>
-                                  <small>
-                                    {formatCompactDate(entry.start)} {formatTime(entry.start)}-
-                                    {formatTime(entry.end)}
-                                  </small>
-                                </span>
-                                {entry.run.status === "finished" ? <em>done</em> : null}
-                              </span>
-                            ))
+                            <>
+                              {project.runs.length === 0 ? (
+                                <span>no prints yet</span>
+                              ) : (
+                                sortedProjectRuns.map((entry) => (
+                                  <span
+                                    className={`project-detail-row ${
+                                      entry.run.status === "finished" ? "is-done" : ""
+                                    }`}
+                                    key={entry.run.id}
+                                  >
+                                    <span className="project-detail-copy">
+                                      <strong>{entry.product.name}</strong>
+                                      <small>
+                                        {formatCompactDate(entry.start)}{" "}
+                                        {formatTime(entry.start)}-{formatTime(entry.end)}
+                                      </small>
+                                    </span>
+                                    {entry.run.status === "finished" ? <em>done</em> : null}
+                                  </span>
+                                ))
+                              )}
+                              <div className="project-detail-actions">
+                                <button
+                                  className="mini-edit-pill project-remove-button"
+                                  onClick={() => openProjectEdit(project)}
+                                  type="button"
+                                >
+                                  edit
+                                </button>
+                                <button
+                                  className="mini-edit-pill project-remove-button"
+                                  onClick={() => requestProjectRemoval(project)}
+                                  type="button"
+                                >
+                                  archive
+                                </button>
+                              </div>
+                            </>
                           )}
-                          <div className="project-detail-actions">
-                            <button
-                              className="mini-edit-pill project-remove-button"
-                              onClick={() => openProjectEdit(project)}
-                              type="button"
-                            >
-                              edit
-                            </button>
-                            <button
-                              className="mini-edit-pill project-remove-button"
-                              onClick={() => requestProjectRemoval(project)}
-                              type="button"
-                            >
-                              archive
-                            </button>
-                          </div>
                         </div>
                       ) : null}
                     </article>

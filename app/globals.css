@@ -73,8 +73,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible {
   border-color: var(--ink);
-  outline: 1px solid var(--ink);
-  outline-offset: 1px;
+  outline: none;
 }
 
 .app-shell {
@@ -237,7 +236,7 @@ h2 {
 .card-pill-button,
 .mobile-edit-button {
   align-items: center;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.3);
   border: 0.75px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
@@ -1385,7 +1384,7 @@ h2 {
 .card-topline strong,
 .card-topline button {
   align-items: center;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.3);
   border: 0.75px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
@@ -1513,7 +1512,7 @@ h2 {
 }
 
 .card-actions button {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.3);
   border: 0.75px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
@@ -1540,7 +1539,6 @@ h2 {
   padding-right: 22px;
 }
 
-.print-card.is-short:not(.is-expanded) .card-topline,
 .print-card.is-short:not(.is-expanded) .progress-track,
 .print-card.is-short:not(.is-expanded) .card-body > span:not(.compact-project-label),
 .print-card.is-short:not(.is-expanded) .card-times,
@@ -1548,12 +1546,29 @@ h2 {
   display: none;
 }
 
+.print-card.is-short:not(.is-expanded) .card-topline {
+  display: flex;
+  left: auto;
+  min-height: 18px;
+  right: 5px;
+  top: 5px;
+}
+
+.print-card.is-short:not(.is-expanded) .card-status-pills,
+.print-card.is-short:not(.is-expanded) .card-topline-actions > :not(.card-pill-button) {
+  display: none;
+}
+
+.print-card.is-short:not(.is-expanded) .card-topline-actions {
+  display: flex;
+}
+
 .print-card.is-short:not(.is-expanded) .card-body {
   align-items: start;
   display: grid;
   gap: 4px;
   justify-content: flex-start;
-  padding: 0 18px 0 0;
+  padding: 0 36px 0 0;
   text-align: left;
 }
 
@@ -1575,12 +1590,12 @@ h2 {
 }
 
 .print-card.is-short:not(.is-expanded) .show-more-button {
-  bottom: auto;
+  bottom: 5px;
   left: auto;
   margin: 0;
   position: absolute;
   right: 5px;
-  top: 5px;
+  top: auto;
   transform: none;
 }
 
@@ -1873,7 +1888,7 @@ h2 {
 
 .project-column {
   align-content: start;
-  background: #f1f2ef;
+  background: var(--surface);
   border: 1px solid var(--line);
   display: grid;
   gap: 10px;
@@ -1927,12 +1942,12 @@ h2 {
 }
 
 .project-column .project-row {
-  background: var(--surface);
-  border: 1px solid var(--project-color, var(--line));
+  background: #f1f2ef;
+  border: 1px solid var(--line);
 }
 
 .project-column .project-row.has-project-color {
-  background: #f1f2ef;
+  border-color: var(--project-color);
 }
 
 .project-summary {
@@ -2087,6 +2102,7 @@ h2 {
 .project-edit-form {
   display: grid;
   gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 38px;
   padding: 0;
 }
 
@@ -2115,6 +2131,7 @@ h2 {
 .project-edit-products {
   display: grid;
   gap: 6px;
+  grid-column: 1 / -1;
 }
 
 .project-edit-products > span {
@@ -2140,6 +2157,7 @@ h2 {
   align-items: center;
   display: flex;
   gap: 6px;
+  grid-column: 1 / -1;
   justify-content: flex-end;
 }
 
@@ -2197,7 +2215,7 @@ h2 {
 }
 
 .timeline-edit-button {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.3);
   border: 0;
   border-left: 0.75px solid var(--line);
   border-radius: 0;
@@ -2213,13 +2231,13 @@ h2 {
 }
 
 .timeline-item.type-deadline .timeline-edit-button {
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.3);
   border: 0;
   border-left: 0.75px solid var(--line);
   color: var(--ink);
-  font-size: 8px;
+  font-size: 9px;
   min-height: 0;
-  padding: 0 6px;
+  padding: 0 8px;
   right: 0;
 }
 
@@ -2887,7 +2905,7 @@ h2 {
   }
 
   .mobile-print-card .assignee-pill {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.3);
     border: 1px solid rgba(31, 31, 29, 0.28);
     border-radius: 999px;
     flex: 0 0 auto;
@@ -2902,7 +2920,7 @@ h2 {
   }
 
   .mobile-edit-button {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.3);
     border: 1px solid rgba(31, 31, 29, 0.28);
     border-radius: 999px;
     color: var(--ink);

@@ -312,6 +312,11 @@ type NewProjectForm = {
   title: string;
 };
 
+type ProjectEditForm = {
+  color: string;
+  title: string;
+};
+
 type ProjectOverviewRow = {
   deadline: Date | null;
   id: string;
@@ -435,31 +440,8 @@ function getProductStyle(product: Product): ProductStyle {
   };
 }
 
-const PROJECT_COLOR_PALETTE = [
-  "#dc8a3a",
-  "#8fa88d",
-  "#9a95d6",
-  "#e0a0c6",
-  "#d7ba67",
-  "#b2dcd6",
-  "#f09a70",
-  "#d2c5aa"
-];
-
 function getProjectKey(project: string) {
   return project.trim().toLowerCase();
-}
-
-function getFallbackProjectColor(project: string) {
-  const key = getProjectKey(project);
-
-  if (!key) {
-    return "#d2c5aa";
-  }
-
-  const hash = [...key].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-
-  return PROJECT_COLOR_PALETTE[hash % PROJECT_COLOR_PALETTE.length];
 }
 
 function getProjectColor(project: string, projectColors: Record<string, string>) {
@@ -1525,6 +1507,11 @@ export function WeekPlanner() {
     deadline: "",
     title: ""
   });
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectEdit, setProjectEdit] = useState<ProjectEditForm>({
+    color: "",
+    title: ""
+  });
   const [newPrint, setNewPrint] = useState<NewPrintForm>(() =>
     createDefaultPrintForm(asDate(BASE_WEEK_START))
   );
@@ -2092,6 +2079,127 @@ export function WeekPlanner() {
 
       return next;
     });
+  }
+
+  function openProjectEdit(project: ProjectOverviewRow) {
+    setExpandedProjectIds((current) => {
+      const next = new Set(current);
+      next.add(project.id);
+      return next;
+    });
+    setEditingProjectId(project.id);
+    setProjectEdit({
+      color: getProjectColor(project.project, projectColors) ?? "",
+      title: project.project
+    });
+  }
+
+  function cancelProjectEdit() {
+    setEditingProjectId(null);
+    setProjectEdit({
+      color: "",
+      title: ""
+    });
+  }
+
+  function saveProjectEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingProjectId) {
+      return;
+    }
+
+    const nextProject = projectEdit.title.trim().toLowerCase();
+    const nextProjectKey = getProjectKey(nextProject);
+
+    if (!nextProjectKey) {
+      return;
+    }
+
+    const previousProjectKey = editingProjectId;
+
+    setRuns((current) =>
+      current.map((run) =>
+        getProjectKey(run.project) === previousProjectKey
+          ? {
+              ...run,
+              project: nextProject
+            }
+          : run
+      )
+    );
+
+    setTimelineEvents((current) =>
+      current.map((eventEntry) => {
+        const eventProjectKey = getProjectKey(
+          eventEntry.deadlineProject ??
+            eventEntry.title.replace(/^deadline\s+/i, "").trim()
+        );
+
+        if (eventEntry.type !== "deadline" || eventProjectKey !== previousProjectKey) {
+          return eventEntry;
+        }
+
+        return {
+          ...eventEntry,
+          deadlineProject: nextProject,
+          title: `deadline ${nextProject}`
+        };
+      })
+    );
+
+    setProjectColors((current) => {
+      const next = { ...current };
+      delete next[previousProjectKey];
+
+      if (projectEdit.color) {
+        next[nextProjectKey] = projectEdit.color;
+      }
+
+      return next;
+    });
+
+    setManualProjectStages((current) => {
+      if (!current[previousProjectKey] || previousProjectKey === nextProjectKey) {
+        return current;
+      }
+
+      const next = { ...current };
+      next[nextProjectKey] = next[previousProjectKey];
+      delete next[previousProjectKey];
+      return next;
+    });
+
+    setHiddenProjectIds((current) => {
+      if (!current.has(previousProjectKey) || previousProjectKey === nextProjectKey) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(previousProjectKey);
+      next.add(nextProjectKey);
+      return next;
+    });
+
+    setShippedInventoryProjectIds((current) => {
+      if (!current.has(previousProjectKey) || previousProjectKey === nextProjectKey) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(previousProjectKey);
+      next.add(nextProjectKey);
+      return next;
+    });
+
+    setExpandedProjectIds((current) => {
+      const next = new Set(current);
+      next.delete(previousProjectKey);
+      next.add(nextProjectKey);
+      return next;
+    });
+
+    cancelProjectEdit();
   }
 
   function updateProductData(
@@ -3536,37 +3644,21 @@ export function WeekPlanner() {
             <label>
               <span>project color</span>
               <div className="project-color-field">
-                {newPrint.projectColor ? (
-                  <>
-                    <input
-                      type="color"
-                      value={newPrint.projectColor}
-                      onChange={(event) => updateNewPrint("projectColor", event.target.value)}
-                    />
-                    <button
-                      aria-label="Remove project color"
-                      className="project-color-clear"
-                      onClick={() => updateNewPrint("projectColor", "")}
-                      type="button"
-                    >
-                      none
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="mini-edit-pill add-color-button"
-                    onClick={() =>
-                      updateNewPrint(
-                        "projectColor",
-                        projectColors[getProjectKey(newPrint.project)] ??
-                          getFallbackProjectColor(newPrint.project)
-                      )
-                    }
-                    type="button"
-                  >
-                    add color
-                  </button>
-                )}
+                <button
+                  aria-label="No project color"
+                  className={`project-color-empty ${
+                    newPrint.projectColor ? "" : "is-active"
+                  }`}
+                  onClick={() => updateNewPrint("projectColor", "")}
+                  type="button"
+                />
+                <input
+                  aria-label="Project color"
+                  className="project-color-input"
+                  type="color"
+                  value={newPrint.projectColor || "#ffffff"}
+                  onChange={(event) => updateNewPrint("projectColor", event.target.value)}
+                />
               </div>
             </label>
 
@@ -3709,37 +3801,21 @@ export function WeekPlanner() {
             <label>
               <span>project color</span>
               <div className="project-color-field">
-                {editPrint.projectColor ? (
-                  <>
-                    <input
-                      type="color"
-                      value={editPrint.projectColor}
-                      onChange={(event) => updateEditPrint("projectColor", event.target.value)}
-                    />
-                    <button
-                      aria-label="Remove project color"
-                      className="project-color-clear"
-                      onClick={() => updateEditPrint("projectColor", "")}
-                      type="button"
-                    >
-                      none
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="mini-edit-pill add-color-button"
-                    onClick={() =>
-                      updateEditPrint(
-                        "projectColor",
-                        projectColors[getProjectKey(editPrint.project)] ??
-                          getFallbackProjectColor(editPrint.project)
-                      )
-                    }
-                    type="button"
-                  >
-                    add color
-                  </button>
-                )}
+                <button
+                  aria-label="No project color"
+                  className={`project-color-empty ${
+                    editPrint.projectColor ? "" : "is-active"
+                  }`}
+                  onClick={() => updateEditPrint("projectColor", "")}
+                  type="button"
+                />
+                <input
+                  aria-label="Project color"
+                  className="project-color-input"
+                  type="color"
+                  value={editPrint.projectColor || "#ffffff"}
+                  onChange={(event) => updateEditPrint("projectColor", event.target.value)}
+                />
               </div>
             </label>
 
@@ -4633,13 +4709,13 @@ export function WeekPlanner() {
                         type="button"
                       >
                         <span className="project-card-main">
-                          <strong>{project.project}</strong>
                           <span className="project-meta">
                             <em>{project.runs.length}</em>
                             {project.deadline ? (
                               <small>by {formatCompactDate(project.deadline)}</small>
                             ) : null}
                           </span>
+                          <strong>{project.project}</strong>
                         </span>
                         <span
                           className={`project-arrow ${isExpanded ? "is-open" : ""}`}
@@ -4648,6 +4724,71 @@ export function WeekPlanner() {
                       </button>
                       {isExpanded ? (
                         <div className="project-details">
+                          {editingProjectId === project.id ? (
+                            <form
+                              className="project-edit-form"
+                              onSubmit={saveProjectEdit}
+                            >
+                              <label>
+                                <span>project</span>
+                                <input
+                                  autoFocus
+                                  value={projectEdit.title}
+                                  onChange={(event) =>
+                                    setProjectEdit((current) => ({
+                                      ...current,
+                                      title: event.target.value
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label>
+                                <span>color</span>
+                                <div className="project-color-field">
+                                  <button
+                                    aria-label="No project color"
+                                    className={`project-color-empty ${
+                                      projectEdit.color ? "" : "is-active"
+                                    }`}
+                                    onClick={() =>
+                                      setProjectEdit((current) => ({
+                                        ...current,
+                                        color: ""
+                                      }))
+                                    }
+                                    type="button"
+                                  />
+                                  <input
+                                    aria-label="Project color"
+                                    className="project-color-input"
+                                    type="color"
+                                    value={projectEdit.color || "#ffffff"}
+                                    onChange={(event) =>
+                                      setProjectEdit((current) => ({
+                                        ...current,
+                                        color: event.target.value
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              </label>
+                              <div className="project-edit-actions">
+                                <button
+                                  className="mini-edit-pill project-remove-button"
+                                  disabled={!projectEdit.title.trim()}
+                                  type="submit"
+                                >
+                                  save
+                                </button>
+                                <button
+                                  aria-label="Cancel project edit"
+                                  className="icon-button"
+                                  onClick={cancelProjectEdit}
+                                  type="button"
+                                />
+                              </div>
+                            </form>
+                          ) : null}
                           {project.runs.length === 0 ? (
                             <span>no prints yet</span>
                           ) : (
@@ -4670,6 +4811,13 @@ export function WeekPlanner() {
                             ))
                           )}
                           <div className="project-detail-actions">
+                            <button
+                              className="mini-edit-pill project-remove-button"
+                              onClick={() => openProjectEdit(project)}
+                              type="button"
+                            >
+                              edit
+                            </button>
                             <button
                               className="mini-edit-pill project-remove-button"
                               onClick={() => requestProjectRemoval(project)}

@@ -1851,13 +1851,17 @@ h2 {
   background: transparent;
   border: 0;
   color: var(--ink);
-  cursor: pointer;
+  cursor: grab;
   display: grid;
   font: inherit;
   grid-template-columns: minmax(0, 1fr) 18px;
   min-height: 54px;
   padding: 0;
   text-align: left;
+}
+
+.project-summary:active {
+  cursor: grabbing;
 }
 
 .project-card-main {

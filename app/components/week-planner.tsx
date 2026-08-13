@@ -4529,7 +4529,10 @@ export function WeekPlanner() {
                     >
                       <button
                         className="project-summary"
+                        draggable
                         onClick={() => toggleProject(project.id)}
+                        onDragEnd={handlePrintDragEnd}
+                        onDragStart={(event) => handleProjectDragStart(event, project.id)}
                         type="button"
                       >
                         <span className="project-card-main">

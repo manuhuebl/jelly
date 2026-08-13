@@ -1398,7 +1398,7 @@ function getTimelineEntries(
 function getTimelineColor(entry: TimelineEvent) {
   const colors: Record<TimelineKind, string> = {
     custom: entry.color ?? "#d65454",
-    deadline: "#d65454",
+    deadline: "#1f1f1d",
     event: "#898cd6",
     ooo: "#c8c4be",
     "social media": "#fac7c2",
@@ -3406,7 +3406,7 @@ export function WeekPlanner() {
         <img className="brand-logo" src="/logo/logo.png" alt="jelly" />
         {viewToggle}
         <button className="primary-action" onClick={openNewPrintForm} type="button">
-          + print
+          + Print
         </button>
       </header>
 
@@ -3644,17 +3644,11 @@ export function WeekPlanner() {
             <label>
               <span>project color</span>
               <div className="project-color-field">
-                <button
-                  aria-label="No project color"
-                  className={`project-color-empty ${
-                    newPrint.projectColor ? "" : "is-active"
-                  }`}
-                  onClick={() => updateNewPrint("projectColor", "")}
-                  type="button"
-                />
                 <input
                   aria-label="Project color"
-                  className="project-color-input"
+                  className={`project-color-input ${
+                    newPrint.projectColor ? "" : "is-empty"
+                  }`}
                   type="color"
                   value={newPrint.projectColor || "#ffffff"}
                   onChange={(event) => updateNewPrint("projectColor", event.target.value)}
@@ -3726,14 +3720,14 @@ export function WeekPlanner() {
                     onClick={() => updateNewPrint("customerDeadline", "")}
                     type="button"
                   >
-                    clear
+                    Clear
                   </button>
                 ) : null}
               </div>
             </label>
 
             <button disabled={!canAddPrint} type="submit">
-              Add print
+              Add Print
             </button>
           </form>
 
@@ -3801,17 +3795,11 @@ export function WeekPlanner() {
             <label>
               <span>project color</span>
               <div className="project-color-field">
-                <button
-                  aria-label="No project color"
-                  className={`project-color-empty ${
-                    editPrint.projectColor ? "" : "is-active"
-                  }`}
-                  onClick={() => updateEditPrint("projectColor", "")}
-                  type="button"
-                />
                 <input
                   aria-label="Project color"
-                  className="project-color-input"
+                  className={`project-color-input ${
+                    editPrint.projectColor ? "" : "is-empty"
+                  }`}
                   type="color"
                   value={editPrint.projectColor || "#ffffff"}
                   onChange={(event) => updateEditPrint("projectColor", event.target.value)}
@@ -3883,7 +3871,7 @@ export function WeekPlanner() {
                     onClick={() => updateEditPrint("customerDeadline", "")}
                     type="button"
                   >
-                    clear
+                    Clear
                   </button>
                 ) : null}
               </div>
@@ -4156,10 +4144,6 @@ export function WeekPlanner() {
                           style={currentTimeStyle}
                           aria-label={`Current time ${formatTime(now)}`}
                         />
-                      ) : null}
-
-                      {layout.segments.length === 0 ? (
-                        <p className="empty-week">no prints this week</p>
                       ) : null}
 
                       {layout.segments.map((segment) => {
@@ -4544,7 +4528,7 @@ export function WeekPlanner() {
               }}
               type="button"
             >
-              + create event
+              + Create event
             </button>
           </div>
           <div className="timeline-row">
@@ -4745,22 +4729,11 @@ export function WeekPlanner() {
                               <label>
                                 <span>color</span>
                                 <div className="project-color-field">
-                                  <button
-                                    aria-label="No project color"
-                                    className={`project-color-empty ${
-                                      projectEdit.color ? "" : "is-active"
-                                    }`}
-                                    onClick={() =>
-                                      setProjectEdit((current) => ({
-                                        ...current,
-                                        color: ""
-                                      }))
-                                    }
-                                    type="button"
-                                  />
                                   <input
                                     aria-label="Project color"
-                                    className="project-color-input"
+                                    className={`project-color-input ${
+                                      projectEdit.color ? "" : "is-empty"
+                                    }`}
                                     type="color"
                                     value={projectEdit.color || "#ffffff"}
                                     onChange={(event) =>
@@ -4950,7 +4923,7 @@ export function WeekPlanner() {
               onClick={() => setIsMaterialCreateOpen(true)}
               type="button"
             >
-              + material
+              + Material
             </button>
           </div>
           {isMaterialCreateOpen ? (
@@ -5068,7 +5041,7 @@ export function WeekPlanner() {
             }}
             type="button"
           >
-            + product
+            + Product
           </button>
         </summary>
         <div className="drawer-grid">

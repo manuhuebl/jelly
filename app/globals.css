@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  --background: #ffffff;
+  --background: #f7f8f6;
   --surface: #ffffff;
   --surface-muted: #ffffff;
   --ink: #1f1f1d;
@@ -126,8 +126,8 @@ select:focus-visible {
 .topbar {
   align-items: start;
   display: grid;
-  column-gap: 20px;
-  grid-template-columns: 1fr auto;
+  column-gap: 8px;
+  grid-template-columns: 1fr auto auto;
   grid-template-rows: auto auto;
   margin-bottom: 24px;
   min-height: 0;
@@ -135,12 +135,14 @@ select:focus-visible {
 }
 
 .view-toggle {
+  align-self: end;
   border: 1px solid var(--line-soft);
   display: flex;
   gap: 0;
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 2;
-  justify-self: start;
+  height: 38px;
+  justify-self: end;
   padding: 0;
 }
 
@@ -151,8 +153,9 @@ select:focus-visible {
   cursor: pointer;
   font: inherit;
   font-size: 12px;
-  min-height: 28px;
-  padding: 5px 12px;
+  height: 100%;
+  min-height: 0;
+  padding: 0 12px;
 }
 
 .view-toggle button.is-active {
@@ -205,19 +208,20 @@ h2 {
 }
 
 .primary-action {
-  background: transparent;
+  background: var(--ink);
   border-color: var(--ink);
-  color: var(--ink);
+  color: var(--surface);
   font-size: 18px;
   min-height: 48px;
   padding: 10px 20px;
 }
 
 .topbar .primary-action {
-  background: transparent;
-  color: var(--ink);
+  align-self: end;
+  background: var(--ink);
+  color: var(--surface);
   font-size: 13px;
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 2;
   justify-self: end;
   min-height: 38px;
@@ -234,7 +238,7 @@ h2 {
 .mobile-edit-button {
   align-items: center;
   background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(31, 31, 29, 0.28);
+  border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
@@ -410,7 +414,7 @@ h2 {
 
 .delete-popup.is-neutral button:not(.popup-close) {
   background: var(--surface);
-  border-color: rgba(31, 31, 29, 0.28);
+  border-color: var(--line);
   color: var(--ink);
 }
 
@@ -451,7 +455,7 @@ h2 {
 
 .notice-popup .undo-action {
   background: transparent;
-  border-color: rgba(31, 31, 29, 0.28);
+  border-color: var(--line);
   color: inherit;
 }
 
@@ -518,6 +522,9 @@ h2 {
 }
 
 .composer-heading {
+  align-items: center;
+  display: flex;
+  height: 38px;
   justify-content: flex-end;
   position: absolute;
   right: 16px;
@@ -600,8 +607,6 @@ h2 {
   gap: 8px;
 }
 
-.print-form .project-color-empty,
-.project-edit-form .project-color-empty,
 .project-color-input {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -612,8 +617,7 @@ h2 {
   width: 38px;
 }
 
-.print-form .project-color-empty.is-active,
-.project-edit-form .project-color-empty.is-active {
+.project-color-input.is-empty {
   background:
     linear-gradient(135deg, transparent calc(50% - 1px), var(--line) 50%, transparent calc(50% + 1px)),
     var(--surface);
@@ -656,8 +660,8 @@ h2 {
 }
 
 .form-alert {
-  background: var(--action-red);
-  border: 1px solid var(--action-red-border);
+  background: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 6px;
   color: var(--surface);
   font-size: 12px;
@@ -2906,4 +2910,16 @@ h2 {
 .empty-timeline,
 .mobile-empty {
   color: var(--ink) !important;
+}
+
+.print-form label span,
+.print-form .form-field > span,
+.event-form label span,
+.project-edit-form label > span,
+.stock-row label span,
+.product-create-form label span,
+.product-data-edit label span,
+.custom-material-form label span,
+.material-stock-edit label span {
+  text-transform: capitalize !important;
 }

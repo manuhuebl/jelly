@@ -5373,14 +5373,8 @@ export function WeekPlanner() {
                     >
                       <button
                         aria-expanded={isExpanded}
-                        className={`project-summary kanban-project-summary ${
-                          isSingleRun ? "is-single-run" : ""
-                        }`}
-                        onClick={() => {
-                          if (!isSingleRun) {
-                            toggleProject(groupKey);
-                          }
-                        }}
+                        className="project-summary kanban-project-summary"
+                        onClick={() => toggleProject(groupKey)}
                         type="button"
                       >
                         <span className="project-card-main">

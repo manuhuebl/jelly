@@ -210,10 +210,13 @@ h2 {
 }
 
 .topbar .primary-action {
-  background: var(--ink);
-  color: var(--surface);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
   grid-column: 4;
   justify-self: end;
+  min-height: 38px;
+  padding: 7px 12px;
 }
 
 .ghost-action {
@@ -528,13 +531,15 @@ h2 {
   cursor: grabbing;
 }
 
-.print-form label {
+.print-form label,
+.print-form .form-field {
   display: grid;
   gap: 4px;
   min-width: 0;
 }
 
-.print-form label span {
+.print-form label span,
+.print-form .form-field > span {
   color: var(--ink-muted);
   font-size: 10px;
   text-transform: uppercase;
@@ -593,6 +598,43 @@ h2 {
   justify-self: start;
   min-height: 24px;
   padding: 3px 8px;
+}
+
+.print-form .project-color-clear {
+  align-self: center;
+  background: transparent;
+  border: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 10px;
+  min-height: 0;
+  padding: 0;
+}
+
+.printer-toggle {
+  border: 1px solid var(--line-soft);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  height: 38px;
+}
+
+.print-form .printer-toggle button {
+  background: transparent;
+  border: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 12px;
+  min-height: 0;
+  padding: 0;
+}
+
+.print-form .printer-toggle button + button {
+  border-left: 1px solid var(--line-soft);
+}
+
+.print-form .printer-toggle button.is-active {
+  background: var(--surface-muted);
+  color: var(--ink);
 }
 
 .form-alert {
@@ -2739,4 +2781,26 @@ h2 {
   .product-list {
     grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   }
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+.assignee-pill,
+.card-topline .assignee-pill,
+.mobile-print-card .assignee-pill {
+  align-items: center;
+  aspect-ratio: 1 / 1;
+  border-radius: 50% !important;
+  display: inline-flex;
+  flex: 0 0 18px;
+  height: 18px;
+  justify-content: center;
+  line-height: 1;
+  min-height: 18px;
+  min-width: 18px;
+  overflow: visible;
+  padding: 0;
+  width: 18px;
 }

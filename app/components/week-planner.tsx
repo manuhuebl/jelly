@@ -859,7 +859,7 @@ function getReorderDate(
 
 function getProductInventory(
   runs: PrintRun[],
-  now: Date,
+  _now: Date,
   manualStock: Record<string, number>,
   productList: Product[],
   productMap: Map<string, Product>
@@ -867,7 +867,7 @@ function getProductInventory(
   const completedCounts = new Map<Product["id"], number>();
 
   getScheduledRuns(runs, productMap).forEach((entry) => {
-    if (entry.end <= now && entry.run.status !== "failed") {
+    if (entry.run.status === "finished") {
       completedCounts.set(
         entry.product.id,
         (completedCounts.get(entry.product.id) ?? 0) + 1
@@ -1343,11 +1343,7 @@ function getCompactProjectLabel(
 }
 
 function canShowCompactProject(segment: CalendarSegment) {
-  return (
-    segment.durationHours >= 4.5 &&
-    !segment.product.id.startsWith("banana") &&
-    Boolean(segment.run.project)
-  );
+  return Boolean(segment.run.project);
 }
 
 function isDateInWeek(date: Date, weekStart: Date) {
@@ -1583,6 +1579,9 @@ export function WeekPlanner() {
   const [hiddenProjectIds, setHiddenProjectIds] = useState<Set<string>>(
     () => new Set()
   );
+  const [shippedInventoryProjectIds, setShippedInventoryProjectIds] = useState<
+    Set<string>
+  >(() => new Set());
   const [pendingProjectRemoval, setPendingProjectRemoval] =
     useState<ProjectOverviewRow | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -1728,6 +1727,9 @@ export function WeekPlanner() {
         );
         setProjectColors(loadedState.state.projectColors ?? {});
         setShippingBoxStock(normalizeShippingBoxStock(loadedState.state.shippingBoxStock));
+        setShippedInventoryProjectIds(
+          new Set(loadedState.state.shippedInventoryProjectIds ?? [])
+        );
         setManualProductInventory(loadedState.state.manualProductInventory);
       }
 
@@ -1766,6 +1768,7 @@ export function WeekPlanner() {
       projectColors,
       runs,
       shippingBoxStock,
+      shippedInventoryProjectIds: [...shippedInventoryProjectIds],
       timelineEvents
     };
 
@@ -1793,6 +1796,7 @@ export function WeekPlanner() {
     projectColors,
     runs,
     shippingBoxStock,
+    shippedInventoryProjectIds,
     timelineEvents
   ]);
 
@@ -1817,6 +1821,7 @@ export function WeekPlanner() {
       projectColors,
       runs: nextRuns,
       shippingBoxStock,
+      shippedInventoryProjectIds: [...shippedInventoryProjectIds],
       timelineEvents
     };
 
@@ -2573,10 +2578,52 @@ export function WeekPlanner() {
     setPendingDelete(null);
   }
 
+  function adjustManualProductStock(
+    productCounts: Map<Product["id"], number>,
+    direction: "add" | "subtract"
+  ) {
+    if (productCounts.size === 0) {
+      return;
+    }
+
+    setManualProductInventory((current) => {
+      const currentInventoryRows = getProductInventory(
+        runs,
+        now,
+        current,
+        productData,
+        productById
+      );
+      const stockByProduct = new Map(
+        currentInventoryRows.map((product) => [product.id, product.stockCount])
+      );
+      const next = {
+        ...current
+      };
+
+      productCounts.forEach((count, productId) => {
+        const currentStock = stockByProduct.get(productId) ?? 0;
+        const nextStock =
+          direction === "subtract" ? currentStock - count : currentStock + count;
+
+        next[productId] = Math.max(nextStock, 0);
+      });
+
+      return next;
+    });
+  }
+
   function updateRunStatus(run: PrintRun, status: JobStatus, startDateTime?: string) {
     const product = productById.get(run.productId);
+    const projectKey = getProjectKey(run.project);
+    const isProjectAlreadyShipped =
+      projectKey.length > 0 && shippedInventoryProjectIds.has(projectKey);
 
     if (status === "finished" && run.status !== "finished" && product) {
+      if (!isProjectAlreadyShipped) {
+        adjustManualProductStock(new Map([[product.id, 1]]), "add");
+      }
+
       setShippingBoxStock((current) => ({
         ...current,
         [product.shippingBoxType]: Math.max((current[product.shippingBoxType] ?? 0) - 1, 0)
@@ -3143,6 +3190,24 @@ export function WeekPlanner() {
     event.dataTransfer.dropEffect = "move";
   }
 
+  function getFinishedProductCountsForProject(projectId: string) {
+    const project = projectRows.find((row) => row.id === projectId);
+
+    if (!project) {
+      return new Map<Product["id"], number>();
+    }
+
+    return project.runs.reduce<Map<Product["id"], number>>((counts, entry) => {
+      if (entry.run.status !== "finished") {
+        return counts;
+      }
+
+      counts.set(entry.product.id, (counts.get(entry.product.id) ?? 0) + 1);
+
+      return counts;
+    }, new Map());
+  }
+
   function handleProjectStageDrop(event: DragEvent<HTMLElement>, stage: ProjectStage) {
     const dragMeta = nativeDragRef.current;
 
@@ -3152,6 +3217,30 @@ export function WeekPlanner() {
 
     event.preventDefault();
     nativeDragRef.current = null;
+
+    const productCounts = getFinishedProductCountsForProject(dragMeta.projectId);
+    const wasShipped = shippedInventoryProjectIds.has(dragMeta.projectId);
+    const willBeShipped = stage === "shipped";
+
+    if (willBeShipped && !wasShipped) {
+      adjustManualProductStock(productCounts, "subtract");
+
+      setShippedInventoryProjectIds((current) => {
+        const next = new Set(current);
+        next.add(dragMeta.projectId);
+        return next;
+      });
+    }
+
+    if (!willBeShipped && wasShipped) {
+      adjustManualProductStock(productCounts, "add");
+
+      setShippedInventoryProjectIds((current) => {
+        const next = new Set(current);
+        next.delete(dragMeta.projectId);
+        return next;
+      });
+    }
 
     setManualProjectStages((current) => {
       const next = {
@@ -3455,11 +3544,12 @@ export function WeekPlanner() {
                       onChange={(event) => updateNewPrint("projectColor", event.target.value)}
                     />
                     <button
-                      className="mini-edit-pill clear-field-button"
+                      aria-label="Remove project color"
+                      className="project-color-clear"
                       onClick={() => updateNewPrint("projectColor", "")}
                       type="button"
                     >
-                      clear
+                      none
                     </button>
                   </>
                 ) : (
@@ -3480,19 +3570,22 @@ export function WeekPlanner() {
               </div>
             </label>
 
-            <label>
+            <div className="form-field">
               <span>printer</span>
-              <select
-                value={newPrint.printerId}
-                onChange={(event) => updateNewPrint("printerId", event.target.value)}
-              >
+              <div className="printer-toggle" role="group" aria-label="Printer">
                 {printers.map((printer) => (
-                  <option key={printer.id} value={printer.id}>
-                    {formatPrinterName(printer)}
-                  </option>
+                  <button
+                    aria-label={formatPrinterName(printer)}
+                    className={newPrint.printerId === printer.id ? "is-active" : ""}
+                    key={printer.id}
+                    onClick={() => updateNewPrint("printerId", printer.id)}
+                    type="button"
+                  >
+                    {printer.name}
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
 
             <label>
               <span>starter</span>
@@ -3624,11 +3717,12 @@ export function WeekPlanner() {
                       onChange={(event) => updateEditPrint("projectColor", event.target.value)}
                     />
                     <button
-                      className="mini-edit-pill clear-field-button"
+                      aria-label="Remove project color"
+                      className="project-color-clear"
                       onClick={() => updateEditPrint("projectColor", "")}
                       type="button"
                     >
-                      clear
+                      none
                     </button>
                   </>
                 ) : (
@@ -3649,19 +3743,22 @@ export function WeekPlanner() {
               </div>
             </label>
 
-            <label>
+            <div className="form-field">
               <span>printer</span>
-              <select
-                value={editPrint.printerId}
-                onChange={(event) => updateEditPrint("printerId", event.target.value)}
-              >
+              <div className="printer-toggle" role="group" aria-label="Printer">
                 {printers.map((printer) => (
-                  <option key={printer.id} value={printer.id}>
-                    {formatPrinterName(printer)}
-                  </option>
+                  <button
+                    aria-label={formatPrinterName(printer)}
+                    className={editPrint.printerId === printer.id ? "is-active" : ""}
+                    key={printer.id}
+                    onClick={() => updateEditPrint("printerId", printer.id)}
+                    type="button"
+                  >
+                    {printer.name}
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
 
             <label>
               <span>starter</span>

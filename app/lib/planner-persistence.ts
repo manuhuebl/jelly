@@ -15,6 +15,7 @@ export type StoredPlannerState = {
   projectColors?: Record<string, string>;
   runs: PrintRun[];
   shippingBoxStock?: Record<string, number>;
+  shippedInventoryProjectIds?: string[];
   timelineEvents: Array<{
     color?: string;
     endDateTime: string;

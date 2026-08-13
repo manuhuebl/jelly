@@ -5350,6 +5350,9 @@ export function WeekPlanner() {
                           group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
                         }`
                       : "";
+                  const summaryLine = [summaryHeadline, summaryMeta]
+                    .filter(Boolean)
+                    .join(" - ");
                   const stageSummary = getProjectStageSummary(
                     group.id,
                     kanbanRows,
@@ -5390,8 +5393,7 @@ export function WeekPlanner() {
                       >
                         <span className="project-card-main">
                           <strong>{group.project}</strong>
-                          <span className="kanban-project-title">{summaryHeadline}</span>
-                          {summaryMeta ? <small>{summaryMeta}</small> : null}
+                          <span className="kanban-project-title">{summaryLine}</span>
                           {stageSummary ? (
                             <small className="kanban-project-status">{stageSummary}</small>
                           ) : null}

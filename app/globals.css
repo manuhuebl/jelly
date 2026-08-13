@@ -135,7 +135,6 @@ select:focus-visible {
 
 .view-toggle {
   align-self: end;
-  border: 0;
   display: flex;
   gap: 0;
   grid-column: 3;
@@ -147,8 +146,8 @@ select:focus-visible {
 
 .view-toggle button {
   background: var(--surface);
-  border: 0;
-  color: var(--ink);
+  border: 1px solid #60675d;
+  color: #60675d;
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -158,8 +157,9 @@ select:focus-visible {
 }
 
 .view-toggle button.is-active {
-  background: #60675d;
-  color: var(--surface);
+  background: var(--surface);
+  border-color: var(--ink);
+  color: var(--ink);
 }
 
 .brand-logo {

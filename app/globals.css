@@ -973,6 +973,16 @@ h2 {
   padding: 5px 8px;
 }
 
+.shipping-box-row .custom-material-edit-actions button:not(.icon-button) {
+  background: rgba(255, 255, 255, 0.42);
+  border: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1;
+  min-height: 22px;
+  padding: 3px 9px;
+}
+
 .box-add-pill {
   align-self: end;
   justify-self: end;
@@ -1073,8 +1083,10 @@ h2 {
 .month-view {
   display: grid;
   gap: 6px;
-  padding-top: 27px;
+  margin-left: var(--time-gutter);
+  padding-top: 36px;
   position: relative;
+  width: var(--calendar-width);
 }
 
 .month-view-heading {

@@ -1787,6 +1787,14 @@ export function WeekPlanner() {
     specification: "",
     type: ""
   });
+  const [editingCustomMaterialId, setEditingCustomMaterialId] = useState<string | null>(
+    null
+  );
+  const [customMaterialEdit, setCustomMaterialEdit] = useState<NewMaterialForm>({
+    count: "",
+    specification: "",
+    type: ""
+  });
   const [manualProductInventory, setManualProductInventory] = useState<
     Record<string, number>
   >({});
@@ -2273,6 +2281,12 @@ export function WeekPlanner() {
       return;
     }
 
+    setEditingCustomMaterialId(null);
+    setCustomMaterialEdit({
+      count: "",
+      specification: "",
+      type: ""
+    });
     setCustomMaterials((current) => [
       ...current,
       {
@@ -2288,6 +2302,56 @@ export function WeekPlanner() {
       type: ""
     });
     setIsMaterialCreateOpen(false);
+    showSavedNotice();
+  }
+
+  function openCustomMaterialEdit(material: CustomMaterial) {
+    setIsMaterialCreateOpen(false);
+    setEditingCustomMaterialId(material.id);
+    setCustomMaterialEdit({
+      count: String(material.count),
+      specification: material.specification,
+      type: material.type
+    });
+  }
+
+  function cancelCustomMaterialEdit() {
+    setEditingCustomMaterialId(null);
+    setCustomMaterialEdit({
+      count: "",
+      specification: "",
+      type: ""
+    });
+  }
+
+  function saveCustomMaterialEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingCustomMaterialId) {
+      return;
+    }
+
+    const count = Math.max(Math.floor(Number(customMaterialEdit.count) || 0), 0);
+    const type = customMaterialEdit.type.trim();
+    const specification = customMaterialEdit.specification.trim();
+
+    if (!type || !specification) {
+      return;
+    }
+
+    setCustomMaterials((current) =>
+      current.map((material) =>
+        material.id === editingCustomMaterialId
+          ? {
+              ...material,
+              count,
+              specification,
+              type
+            }
+          : material
+      )
+    );
+    cancelCustomMaterialEdit();
     showSavedNotice();
   }
 
@@ -5628,17 +5692,81 @@ export function WeekPlanner() {
             ))}
             {customMaterials.map((material) => (
               <article className="shipping-box-row" key={material.id}>
-                <div>
-                  <strong>
-                    {material.count} {material.type}
-                  </strong>
-                  <span>{material.specification}</span>
-                </div>
+                {editingCustomMaterialId === material.id ? (
+                  <form className="custom-material-edit" onSubmit={saveCustomMaterialEdit}>
+                    <input
+                      aria-label="Material count"
+                      min="0"
+                      type="number"
+                      value={customMaterialEdit.count}
+                      onChange={(event) =>
+                        setCustomMaterialEdit((current) => ({
+                          ...current,
+                          count: event.target.value
+                        }))
+                      }
+                    />
+                    <input
+                      aria-label="Material type"
+                      value={customMaterialEdit.type}
+                      onChange={(event) =>
+                        setCustomMaterialEdit((current) => ({
+                          ...current,
+                          type: event.target.value
+                        }))
+                      }
+                    />
+                    <input
+                      aria-label="Material specification"
+                      value={customMaterialEdit.specification}
+                      onChange={(event) =>
+                        setCustomMaterialEdit((current) => ({
+                          ...current,
+                          specification: event.target.value
+                        }))
+                      }
+                    />
+                    <button
+                      disabled={
+                        !customMaterialEdit.type.trim() ||
+                        !customMaterialEdit.specification.trim()
+                      }
+                      type="submit"
+                    >
+                      save
+                    </button>
+                    <button
+                      aria-label="Cancel material edit"
+                      className="icon-button"
+                      onClick={cancelCustomMaterialEdit}
+                      type="button"
+                    />
+                  </form>
+                ) : (
+                  <>
+                    <div>
+                      <strong>
+                        {material.count} {material.type}
+                      </strong>
+                      <span>{material.specification}</span>
+                    </div>
+                    <button
+                      className="mini-edit-pill material-edit-pill"
+                      onClick={() => openCustomMaterialEdit(material)}
+                      type="button"
+                    >
+                      edit
+                    </button>
+                  </>
+                )}
               </article>
             ))}
             <button
               className="mini-edit-pill box-add-pill"
-              onClick={() => setIsMaterialCreateOpen(true)}
+              onClick={() => {
+                cancelCustomMaterialEdit();
+                setIsMaterialCreateOpen(true);
+              }}
               type="button"
             >
               + material

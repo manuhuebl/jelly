@@ -924,6 +924,10 @@ h2 {
   grid-template-columns: 1fr 70px auto auto;
 }
 
+.shipping-box-row .custom-material-edit {
+  grid-template-columns: 58px minmax(0, 1fr) minmax(0, 1fr) auto auto;
+}
+
 .shipping-box-row input {
   background: var(--surface);
   border: 1px solid var(--line-soft);

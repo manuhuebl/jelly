@@ -225,6 +225,12 @@ type PendingPastAction =
       startDateTime: string;
     };
 
+type PendingFreeSpotAction = {
+  conflictLabel: string;
+  form: NewPrintForm;
+  nextStart: Date;
+};
+
 type CustomMaterial = {
   count: number;
   id: string;
@@ -1339,6 +1345,55 @@ function getDefaultNewPrintStart(weekStart: Date, now: Date) {
   return nextStart;
 }
 
+function normalizeWorkdayStart(date: Date) {
+  const next = roundUpToHalfHour(date);
+
+  if (isWeekend(next)) {
+    const nextWorkday = getNextWorkday(next);
+    nextWorkday.setHours(10, 0, 0, 0);
+    return nextWorkday;
+  }
+
+  if (next.getHours() < 10) {
+    next.setHours(10, 0, 0, 0);
+    return next;
+  }
+
+  if (next.getHours() >= 19) {
+    const nextWorkday = getNextWorkday(next);
+    nextWorkday.setHours(10, 0, 0, 0);
+    return nextWorkday;
+  }
+
+  return next;
+}
+
+function findNextFreePrintStart(
+  form: NewPrintForm,
+  runs: PrintRun[],
+  productMap: Map<string, Product>,
+  from: Date
+) {
+  let candidateStart = normalizeWorkdayStart(from);
+
+  for (let index = 0; index < 14 * 18; index += 1) {
+    const candidateForm = {
+      ...form,
+      date: formatDateInput(candidateStart),
+      time: formatTimeInput(candidateStart)
+    };
+    const candidateRun = buildCandidateRun(candidateForm, "candidate-next-free");
+
+    if (!findPrintConflict(candidateRun, runs, productMap)) {
+      return candidateStart;
+    }
+
+    candidateStart = normalizeWorkdayStart(addHours(candidateStart, 0.5));
+  }
+
+  return null;
+}
+
 function getRunActionLabels(entry: ScheduledRun, now: Date) {
   if (entry.run.status === "failed" || entry.run.status === "finished") {
     return [];
@@ -1677,6 +1732,8 @@ export function WeekPlanner() {
   const [pendingUndoMove, setPendingUndoMove] = useState<PendingUndoMove | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [pendingPastAction, setPendingPastAction] = useState<PendingPastAction | null>(null);
+  const [pendingFreeSpotAction, setPendingFreeSpotAction] =
+    useState<PendingFreeSpotAction | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [pendingWeekendAction, setPendingWeekendAction] =
     useState<PendingWeekendAction | null>(null);
@@ -1833,7 +1890,7 @@ export function WeekPlanner() {
   const conflict = findPrintConflict(candidateRun, runs, productById);
   const hasWeekendStart = isWeekend(candidateStart);
   const hasPastStart = candidateStart < now;
-  const canAddPrint = newPrint.project.trim().length > 0 && !conflict && !hasPastStart;
+  const canAddPrint = newPrint.project.trim().length > 0 && !hasPastStart;
   const selectedRun = selectedRunId ? runs.find((run) => run.id === selectedRunId) : null;
   const selectedProduct = selectedRun ? productById.get(selectedRun.productId) : null;
   const editCandidate =
@@ -2680,6 +2737,26 @@ export function WeekPlanner() {
     }
 
     if (printConflict) {
+      const nextFreeStart = findNextFreePrintStart(
+        form,
+        runs,
+        productById,
+        getEndDate(printConflict.run, printConflict.product)
+      );
+
+      if (nextFreeStart) {
+        setPendingFreeSpotAction({
+          conflictLabel: `${printConflict.product.name} / ${printConflict.run.project}`,
+          form: {
+            ...form,
+            date: formatDateInput(nextFreeStart),
+            time: formatTimeInput(nextFreeStart)
+          },
+          nextStart: nextFreeStart
+        });
+        return;
+      }
+
       setNotice({
         title: "Overlap blocked",
         body: `${printConflict.product.name} already uses this printer at that time.`
@@ -2716,6 +2793,17 @@ export function WeekPlanner() {
   function addNewPrint(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     commitNewPrint(newPrint);
+  }
+
+  function confirmNextFreeSpot() {
+    if (!pendingFreeSpotAction) {
+      return;
+    }
+
+    const form = pendingFreeSpotAction.form;
+    setPendingFreeSpotAction(null);
+    setNewPrint(form);
+    commitNewPrint(form);
   }
 
   function openEditPanel(run: PrintRun) {
@@ -3649,6 +3737,8 @@ export function WeekPlanner() {
   }
 
   function handleKanbanRunDragStart(event: DragEvent<HTMLElement>, runId: string) {
+    event.stopPropagation();
+
     nativeDragRef.current = {
       kind: "kanban-run",
       runId
@@ -3674,6 +3764,7 @@ export function WeekPlanner() {
     }
 
     event.preventDefault();
+    event.stopPropagation();
     nativeDragRef.current = null;
 
     const runEntry = kanbanRows.find((entry) => entry.run.id === dragMeta.runId);
@@ -3865,6 +3956,29 @@ export function WeekPlanner() {
         </aside>
       ) : null}
 
+      {pendingFreeSpotAction ? (
+        <aside className="start-popup free-spot-popup" aria-label="Confirm next free spot">
+          <div>
+            <strong>Move to next free spot?</strong>
+            <span>
+              Conflict with {pendingFreeSpotAction.conflictLabel}. Move to{" "}
+              {formatDayHeading(pendingFreeSpotAction.nextStart)} at{" "}
+              {formatTime(pendingFreeSpotAction.nextStart)}?
+            </span>
+          </div>
+          <button onClick={confirmNextFreeSpot} type="button">
+            Yes
+          </button>
+          <button
+            className="ghost-action"
+            onClick={() => setPendingFreeSpotAction(null)}
+            type="button"
+          >
+            No
+          </button>
+        </aside>
+      ) : null}
+
       {pendingDelete ? (
         <aside className="delete-popup" aria-label="Confirm delete">
           <div>
@@ -3940,7 +4054,10 @@ export function WeekPlanner() {
               style={
                 {
                   ...getPreviewStyle(selectedNewProduct),
-                  "--project-color": getProjectColor(newPrint.project, projectColors)
+                  "--project-color":
+                    newPrint.projectColor ||
+                    getProjectColor(newPrint.project, projectColors) ||
+                    "transparent"
                 } as PreviewStyle
               }
               title="Drag into calendar"
@@ -5179,6 +5296,7 @@ export function WeekPlanner() {
                               className="kanban-run-item"
                               draggable={!isEditing}
                               key={entry.run.id}
+                              onClick={(event) => event.stopPropagation()}
                               onDragEnd={handlePrintDragEnd}
                               onDragStart={(event) =>
                                 handleKanbanRunDragStart(event, entry.run.id)

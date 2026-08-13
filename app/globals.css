@@ -2064,6 +2064,11 @@ h2 {
   white-space: normal;
 }
 
+.kanban-project-summary.is-single-run {
+  cursor: grab;
+  pointer-events: none;
+}
+
 .kanban-project-title {
   color: var(--ink);
   display: block;

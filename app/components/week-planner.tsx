@@ -5370,13 +5370,12 @@ export function WeekPlanner() {
                     >
                       <button
                         aria-expanded={isExpanded}
-                        className="project-summary kanban-project-summary"
-                        draggable={isSingleRun}
-                        onClick={() => toggleProject(groupKey)}
-                        onDragEnd={handlePrintDragEnd}
-                        onDragStart={(event) => {
-                          if (isSingleRun) {
-                            handleKanbanRunDragStart(event, group.runs[0].run.id);
+                        className={`project-summary kanban-project-summary ${
+                          isSingleRun ? "is-single-run" : ""
+                        }`}
+                        onClick={() => {
+                          if (!isSingleRun) {
+                            toggleProject(groupKey);
                           }
                         }}
                         type="button"
@@ -5399,7 +5398,6 @@ export function WeekPlanner() {
                         <div className="kanban-run-list">
                         {group.runs.map((entry) => {
                           const isEditing = editingKanbanRunId === entry.run.id;
-                          const hasProjectGroup = entry.total > 1;
 
                           return (
                             <div
@@ -5506,12 +5504,7 @@ export function WeekPlanner() {
                               ) : (
                                 <>
                                   <span className="kanban-run-copy">
-                                    <strong>
-                                      {entry.product.name}
-                                      {hasProjectGroup
-                                        ? ` (${entry.index}/${entry.total})`
-                                        : ""}
-                                    </strong>
+                                    <strong>{entry.product.name}</strong>
                                     <small>
                                       {formatCompactDate(entry.start)}{" "}
                                       {formatTime(entry.start)}-{formatTime(entry.end)}

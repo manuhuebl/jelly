@@ -964,14 +964,26 @@ function getProjectOverviewRows(
   });
 }
 
-function getAutomaticProjectStage(project: ProjectOverviewRow): ProjectStage {
-  if (project.runs.some((entry) => entry.run.status === "printing")) {
+function isRunAwaitingReview(entry: ScheduledRun, now: Date) {
+  return entry.run.status === "printing" && entry.end <= now;
+}
+
+function isRunDoneForProjectStage(entry: ScheduledRun, now: Date) {
+  return entry.run.status === "finished" || isRunAwaitingReview(entry, now);
+}
+
+function getAutomaticProjectStage(project: ProjectOverviewRow, now: Date): ProjectStage {
+  if (
+    project.runs.some(
+      (entry) => entry.run.status === "printing" && entry.end > now
+    )
+  ) {
     return "printing";
   }
 
   if (
     project.runs.length > 0 &&
-    project.runs.every((entry) => entry.run.status === "finished")
+    project.runs.every((entry) => isRunDoneForProjectStage(entry, now))
   ) {
     return "ready";
   }
@@ -981,9 +993,10 @@ function getAutomaticProjectStage(project: ProjectOverviewRow): ProjectStage {
 
 function getProjectStage(
   project: ProjectOverviewRow,
-  manualStages: Record<string, ProjectStage>
+  manualStages: Record<string, ProjectStage>,
+  now: Date
 ): ProjectStage {
-  const automaticStage = getAutomaticProjectStage(project);
+  const automaticStage = getAutomaticProjectStage(project, now);
   const manualStage = manualStages[project.id];
 
   if (automaticStage === "printing") {
@@ -1680,7 +1693,7 @@ export function WeekPlanner() {
     (groups, stage) => ({
       ...groups,
       [stage.id]: projectRows.filter(
-        (project) => getProjectStage(project, manualProjectStages) === stage.id
+        (project) => getProjectStage(project, manualProjectStages, now) === stage.id
       )
     }),
     {} as Record<ProjectStage, ProjectOverviewRow[]>

@@ -1,13 +1,13 @@
 :root {
   color-scheme: light;
-  --background: #f7f8f6;
+  --background: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #eef1ec;
+  --surface-muted: #ffffff;
   --ink: #1f1f1d;
-  --ink-muted: #60675d;
+  --ink-muted: #1f1f1d;
   --line: #1f1f1d;
   --line-soft: #1f1f1d;
-  --grid-line: rgba(96, 103, 93, 0.2);
+  --grid-line: rgba(31, 31, 29, 0.16);
   --danger: #c95f64;
   --action-red: #c95f64;
   --action-red-border: #b34d52;
@@ -171,11 +171,11 @@ select:focus-visible {
 }
 
 .eyebrow {
-  color: var(--ink-muted);
-  font-size: 11px;
+  color: var(--ink);
+  font-size: 13px;
   letter-spacing: 0;
-  margin-bottom: 5px;
-  text-transform: uppercase;
+  margin-bottom: 10px;
+  text-transform: none;
 }
 
 h1 {
@@ -527,7 +527,7 @@ h2 {
 
 .new-print-preview {
   background: var(--product-color);
-  border: 2px solid var(--project-color, transparent);
+  border: 1px solid var(--project-color, var(--line));
   border-radius: 6px;
   color: var(--ink);
   cursor: grab;
@@ -760,7 +760,7 @@ h2 {
 .shipping-box-row {
   align-items: start;
   background: var(--surface-muted);
-  border: 0;
+  border: 1px solid var(--line);
   border-radius: 6px;
   display: grid;
   gap: 12px;
@@ -1115,7 +1115,7 @@ h2 {
 
 .month-print-chip {
   background: var(--product-color);
-  border: 2px solid var(--project-color, transparent);
+  border: 1px solid var(--project-color, var(--line));
   border-radius: 4px;
   color: var(--ink);
   cursor: grab;
@@ -1274,7 +1274,7 @@ h2 {
 
 .print-card {
   background: var(--product-color);
-  border: 2px solid var(--project-color, transparent);
+  border: 1px solid var(--project-color, var(--line));
   border-radius: 6px;
   color: var(--ink);
   cursor: default;
@@ -1831,8 +1831,8 @@ h2 {
 
 .project-overview .eyebrow,
 .inventory-summary .eyebrow {
-  font-size: 10px;
-  margin-bottom: 4px;
+  font-size: 13px;
+  margin-bottom: 10px;
 }
 
 .project-list {
@@ -1852,6 +1852,7 @@ h2 {
 .project-column {
   align-content: start;
   background: var(--surface-muted);
+  border: 1px solid var(--line);
   display: grid;
   gap: 10px;
   min-height: 170px;
@@ -1860,11 +1861,11 @@ h2 {
 
 .project-column-heading {
   align-items: center;
-  color: var(--ink-muted);
+  color: var(--ink);
   display: flex;
-  font-size: 10px;
+  font-size: 12px;
   justify-content: space-between;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .project-column-heading strong {
@@ -1872,12 +1873,16 @@ h2 {
 }
 
 .project-column-heading span {
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  color: var(--ink-muted);
-  min-width: 22px;
-  padding: 3px 6px;
+  color: var(--ink);
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 24px;
+  padding: 0;
   text-align: center;
 }
 
@@ -1891,7 +1896,7 @@ h2 {
 .shipping-box-row {
   align-content: start;
   background: var(--surface-muted);
-  border: 0;
+  border: 1px solid var(--line);
   display: grid;
   gap: 10px;
   min-height: 74px;
@@ -1901,7 +1906,7 @@ h2 {
 
 .project-column .project-row {
   background: var(--surface);
-  border: 2px solid var(--project-color, transparent);
+  border: 1px solid var(--project-color, var(--line));
 }
 
 .project-summary {
@@ -2736,7 +2741,7 @@ h2 {
 
   .mobile-print-card {
     background: var(--product-color);
-    border: 2px solid var(--project-color, transparent);
+    border: 1px solid var(--project-color, var(--line));
     border-radius: 6px;
     color: var(--ink);
     cursor: default;
@@ -2827,7 +2832,7 @@ h2 {
     font-size: 8px;
   }
 
-  .stock-list,
+.stock-list,
   .product-list {
     grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   }
@@ -2835,11 +2840,15 @@ h2 {
 
 * {
   border-radius: 0 !important;
+  text-transform: none !important;
 }
 
 .assignee-pill,
 .card-topline .assignee-pill,
-.mobile-print-card .assignee-pill {
+.mobile-print-card .assignee-pill,
+.month-printer-pill,
+.project-column-heading span,
+.printer-toggle button {
   align-items: center;
   aspect-ratio: 1 / 1;
   border-radius: 50% !important;
@@ -2853,4 +2862,48 @@ h2 {
   overflow: visible;
   padding: 0;
   width: 18px;
+}
+
+.month-printer-pill,
+.project-column-heading span,
+.printer-toggle button {
+  height: 24px;
+  min-height: 24px;
+  min-width: 24px;
+  width: 24px;
+}
+
+.printer-toggle button {
+  height: 38px;
+  min-height: 38px;
+  min-width: 38px;
+  width: 38px;
+}
+
+.eyebrow,
+.project-overview .eyebrow,
+.inventory-summary .eyebrow,
+.product-inventory .eyebrow,
+.data-drawer summary {
+  color: var(--ink) !important;
+  font-size: 13px;
+}
+
+.print-form label span,
+.print-form .form-field > span,
+.event-form label span,
+.project-edit-form label > span,
+.stock-row label span,
+.product-create-form label span,
+.product-data-edit label span,
+.inventory-metric,
+.project-column-heading,
+.project-column-heading span,
+.project-detail-row em,
+.month-day-label,
+.time-label,
+.empty-week,
+.empty-timeline,
+.mobile-empty {
+  color: var(--ink) !important;
 }

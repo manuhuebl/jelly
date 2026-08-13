@@ -46,7 +46,7 @@ const PROJECT_STAGES: Array<{
 }> = [
   { id: "planned", label: "Planned" },
   { id: "printing", label: "Printing" },
-  { id: "ready", label: "Ready to pack" },
+  { id: "ready", label: "Printed" },
   { id: "packed", label: "Packed" },
   { id: "shipped", label: "Shipped" }
 ];
@@ -74,7 +74,7 @@ function normalizeProducts(productList: Product[]) {
 const statusLabels = {
   planned: "planned",
   printing: "printing",
-  finished: "done",
+  finished: "printed",
   failed: "failed",
   reprint: "reprint"
 };
@@ -325,6 +325,7 @@ type ProjectEditForm = {
 
 type RunEditForm = {
   color: string;
+  customerDeadline: string;
   productId: Product["id"];
   project: string;
 };
@@ -801,7 +802,20 @@ function getRunsForDay(
 
   return getScheduledRuns(runs, productMap)
     .filter((entry) => entry.start >= dayStart && entry.start < dayEnd)
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+    .sort(
+      (a, b) =>
+        a.run.printerId.localeCompare(b.run.printerId) ||
+        a.start.getTime() - b.start.getTime()
+    );
+}
+
+function getTimelineEntriesForDay(
+  dayStart: Date,
+  runs: PrintRun[],
+  events: TimelineEvent[],
+  productMap: Map<string, Product>
+) {
+  return getTimelineEntries(runs, events, dayStart, productMap, 1);
 }
 
 function getPlannedPelletUsageKg(
@@ -1133,6 +1147,33 @@ function groupKanbanRowsByProject(rows: KanbanRunRow[]): KanbanProjectGroup[] {
     });
 }
 
+function getProjectStageSummary(
+  projectKey: string,
+  rows: KanbanRunRow[],
+  manualStages: Record<string, ProjectStage>,
+  now: Date
+) {
+  const counts = PROJECT_STAGES.reduce(
+    (summary, stage) => ({
+      ...summary,
+      [stage.id]: 0
+    }),
+    {} as Record<ProjectStage, number>
+  );
+
+  rows
+    .filter((entry) => entry.projectKey === projectKey)
+    .forEach((entry) => {
+      const stage = getRunStage(entry, manualStages, now);
+      counts[stage] += 1;
+    });
+
+  return PROJECT_STAGES
+    .filter((stage) => counts[stage.id] > 0)
+    .map((stage) => `${counts[stage.id]} ${stage.label.toLowerCase()}`)
+    .join(", ");
+}
+
 function buildStartDateTime(date: string, time: string) {
   return `${date}T${time}:00`;
 }
@@ -1375,7 +1416,7 @@ function getSegmentLabel(segment: CalendarSegment, now: Date) {
   }
 
   if (segment.run.status === "finished") {
-    return "done";
+    return "printed";
   }
 
   if (segment.run.status === "failed") {
@@ -1386,7 +1427,7 @@ function getSegmentLabel(segment: CalendarSegment, now: Date) {
     segment.end <= now &&
     (segment.run.status === "planned" || segment.run.status === "reprint")
   ) {
-    return "done";
+    return "printed";
   }
 
   return statusLabels[segment.run.status];
@@ -1699,6 +1740,7 @@ export function WeekPlanner() {
   const [editingKanbanRunId, setEditingKanbanRunId] = useState<string | null>(null);
   const [kanbanRunEdit, setKanbanRunEdit] = useState<RunEditForm>({
     color: "",
+    customerDeadline: "",
     productId: "",
     project: ""
   });
@@ -2425,6 +2467,7 @@ export function WeekPlanner() {
     setEditingKanbanRunId(entry.run.id);
     setKanbanRunEdit({
       color: getProjectColor(entry.run.project, projectColors) ?? "",
+      customerDeadline: entry.deadline ? formatDateInput(entry.deadline) : "",
       productId: entry.run.productId,
       project: entry.run.project
     });
@@ -2434,6 +2477,7 @@ export function WeekPlanner() {
     setEditingKanbanRunId(null);
     setKanbanRunEdit({
       color: "",
+      customerDeadline: "",
       productId: "",
       project: ""
     });
@@ -2453,16 +2497,56 @@ export function WeekPlanner() {
       return;
     }
 
+    const editedRun = runs.find((run) => run.id === editingKanbanRunId);
+    const previousProjectKey = getProjectKey(editedRun?.project ?? "");
+    const nextDeadline = kanbanRunEdit.customerDeadline
+      ? buildStartDateTime(kanbanRunEdit.customerDeadline, "18:00")
+      : undefined;
+
     setRuns((current) =>
-      current.map((run) =>
-        run.id === editingKanbanRunId
-          ? {
-              ...run,
-              productId: kanbanRunEdit.productId,
-              project: nextProject
-            }
-          : run
-      )
+      current.map((run) => {
+        const runProjectKey = getProjectKey(run.project);
+        const isEditedRun = run.id === editingKanbanRunId;
+        const isSameProject = runProjectKey === previousProjectKey;
+
+        if (!isEditedRun && !isSameProject) {
+          return run;
+        }
+
+        return {
+          ...run,
+          customerDeadline: isSameProject ? nextDeadline : run.customerDeadline,
+          productId: isEditedRun ? kanbanRunEdit.productId : run.productId,
+          project: isSameProject ? nextProject : run.project
+        };
+      })
+    );
+
+    setTimelineEvents((current) =>
+      current
+        .map((eventEntry) => {
+        const eventProjectKey = getProjectKey(
+          eventEntry.deadlineProject ??
+            eventEntry.title.replace(/^deadline\s+/i, "").trim()
+        );
+
+        if (eventEntry.type !== "deadline" || eventProjectKey !== previousProjectKey) {
+          return eventEntry;
+        }
+
+        if (!nextDeadline) {
+          return null;
+        }
+
+        return {
+          ...eventEntry,
+          deadlineProject: nextProject,
+          endDateTime: buildStartDateTime(kanbanRunEdit.customerDeadline, "22:00"),
+          startDateTime: nextDeadline,
+          title: `deadline ${nextProject}`
+        };
+      })
+        .filter((eventEntry): eventEntry is TimelineEvent => Boolean(eventEntry))
     );
 
     setProjectColors((current) => {
@@ -4442,7 +4526,7 @@ export function WeekPlanner() {
                         const showStatusPill = shouldShowStatusPill(segmentLabel);
                         const statusInActions =
                           showStatusPill &&
-                          (segmentLabel === "done" || segmentLabel === "failed");
+                          (segmentLabel === "printed" || segmentLabel === "failed");
                         const starter = segment.run.assignee
                           ? starterById.get(segment.run.assignee)
                           : null;
@@ -4908,6 +4992,12 @@ export function WeekPlanner() {
             <div className="month-grid">
               {monthDays.map((day) => {
                 const dayRuns = getRunsForDay(day.date, runs, productById);
+                const dayEvents = getTimelineEntriesForDay(
+                  day.date,
+                  runs,
+                  timelineEvents,
+                  productById
+                );
                 const isPastDay = day.date < getDayStart(now);
 
                 return (
@@ -4956,10 +5046,55 @@ export function WeekPlanner() {
                               {printers.find((printer) => printer.id === entry.run.printerId)
                                 ?.name ?? "1"}
                             </small>
+                            <button
+                              className="mini-edit-pill month-edit-pill"
+                              onClick={() => openEditPanel(entry.run)}
+                              type="button"
+                            >
+                              edit
+                            </button>
                           </article>
                         );
                       })}
                     </div>
+                    {dayEvents.length > 0 ? (
+                      <div className="month-day-events">
+                        {dayEvents.map((entry) => {
+                          const isEditable =
+                            entry.type === "deadline" ||
+                            timelineEvents.some((event) => event.id === entry.id);
+
+                          return (
+                            <article
+                              className={`month-event-chip ${getTimelineTypeClass(
+                                entry.type
+                              )}`}
+                              key={entry.id}
+                              style={
+                                {
+                                  "--event-color": getTimelineColor(entry)
+                                } as CSSProperties & { "--event-color": string }
+                              }
+                            >
+                              {getTimelineLabel(entry)}
+                              {isEditable ? (
+                                <button
+                                  className="mini-edit-pill month-event-edit"
+                                  onClick={() => {
+                                    setWeekOffset(getWeekOffsetForDate(baseWeekStart, entry.start));
+                                    setViewMode("week");
+                                    openTimelineEditPanel(entry);
+                                  }}
+                                  type="button"
+                                >
+                                  edit
+                                </button>
+                              ) : null}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </section>
                 );
               })}
@@ -4986,6 +5121,22 @@ export function WeekPlanner() {
               <div className="project-column-list">
                 {kanbanProjectGroupsByStage[stage.id].map((group) => {
                   const projectColor = getProjectColor(group.project, projectColors);
+                  const groupKey = `${stage.id}-${group.id}`;
+                  const isExpanded = expandedProjectIds.has(groupKey);
+                  const isSingleRun = group.runs.length === 1;
+                  const summaryTitle = isSingleRun
+                    ? `${group.runs[0].product.name}${
+                        group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
+                      }`
+                    : `${group.runs.length}${
+                        group.deadline ? ` by ${formatCompactDate(group.deadline)}` : ""
+                      }`;
+                  const stageSummary = getProjectStageSummary(
+                    group.id,
+                    kanbanRows,
+                    manualRunStages,
+                    now
+                  );
 
                   return (
                     <article
@@ -4999,18 +5150,26 @@ export function WeekPlanner() {
                         } as CSSProperties & { "--project-color": string }
                       }
                     >
-                      <div className="project-summary kanban-project-summary">
+                      <button
+                        aria-expanded={isExpanded}
+                        className="project-summary kanban-project-summary"
+                        onClick={() => toggleProject(groupKey)}
+                        type="button"
+                      >
                         <span className="project-card-main">
-                          <strong>
-                            {group.runs.length}
-                            {group.deadline
-                              ? ` by ${formatCompactDate(group.deadline)}`
-                              : ""}
-                          </strong>
+                          <strong>{summaryTitle}</strong>
                           <span className="kanban-project-title">{group.project}</span>
+                          {stageSummary ? (
+                            <small className="kanban-project-status">{stageSummary}</small>
+                          ) : null}
                         </span>
-                      </div>
-                      <div className="kanban-run-list">
+                        <span
+                          aria-hidden="true"
+                          className={`project-arrow ${isExpanded ? "is-open" : ""}`}
+                        />
+                      </button>
+                      {isExpanded ? (
+                        <div className="kanban-run-list">
                         {group.runs.map((entry) => {
                           const isEditing = editingKanbanRunId === entry.run.id;
                           const hasProjectGroup = entry.total > 1;
@@ -5072,6 +5231,33 @@ export function WeekPlanner() {
                                       }))
                                     }
                                   />
+                                  <div className="clearable-field kanban-deadline-field">
+                                    <input
+                                      aria-label="Deadline"
+                                      type="date"
+                                      value={kanbanRunEdit.customerDeadline}
+                                      onChange={(event) =>
+                                        setKanbanRunEdit((current) => ({
+                                          ...current,
+                                          customerDeadline: event.target.value
+                                        }))
+                                      }
+                                    />
+                                    {kanbanRunEdit.customerDeadline ? (
+                                      <button
+                                        className="mini-edit-pill clear-field-button"
+                                        onClick={() =>
+                                          setKanbanRunEdit((current) => ({
+                                            ...current,
+                                            customerDeadline: ""
+                                          }))
+                                        }
+                                        type="button"
+                                      >
+                                        Clear
+                                      </button>
+                                    ) : null}
+                                  </div>
                                   <div className="project-detail-actions kanban-edit-actions">
                                     <button
                                       className="mini-edit-pill project-remove-button"
@@ -5114,7 +5300,8 @@ export function WeekPlanner() {
                             </div>
                           );
                         })}
-                      </div>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}

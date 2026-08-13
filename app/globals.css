@@ -237,7 +237,7 @@ h2 {
 .mobile-edit-button {
   align-items: center;
   background: rgba(255, 255, 255, 0.3);
-  border: 0.75px solid var(--line);
+  border: 0;
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
@@ -603,9 +603,8 @@ h2 {
 }
 
 .project-color-field {
-  align-items: center;
-  display: flex;
-  gap: 8px;
+  display: grid;
+  min-width: 0;
 }
 
 .project-color-input {
@@ -620,7 +619,13 @@ h2 {
 
 .project-color-input.is-empty {
   background:
-    linear-gradient(135deg, transparent calc(50% - 1px), var(--line) 50%, transparent calc(50% + 1px)),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 1px),
+      var(--line) calc(50% - 1px),
+      var(--line) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
     var(--surface);
 }
 
@@ -768,8 +773,8 @@ h2 {
 .material-card,
 .shipping-box-row {
   align-items: start;
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
+  background: var(--background);
+  border: 0;
   border-radius: 6px;
   display: grid;
   gap: 12px;
@@ -862,7 +867,7 @@ h2 {
 .inventory-metric {
   align-items: center;
   background: var(--surface-muted);
-  border: 1px solid var(--line-soft);
+  border: 0;
   border-radius: 999px;
   color: var(--ink-muted);
   display: flex;
@@ -1091,6 +1096,7 @@ h2 {
   border-right: 1px solid var(--line);
   display: grid;
   gap: 6px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 128px;
   padding: 8px;
 }
@@ -1131,7 +1137,7 @@ h2 {
   display: grid;
   gap: 2px;
   min-height: 42px;
-  padding: 6px 30px 6px 6px;
+  padding: 6px 42px 6px 6px;
   position: relative;
 }
 
@@ -1166,18 +1172,55 @@ h2 {
 .month-print-chip .month-printer-pill {
   align-items: center;
   background: rgba(255, 255, 255, 0.2);
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 999px;
   display: inline-flex;
-  font-size: 9px;
-  height: 18px;
+  font-size: 8px;
+  height: 14px;
   justify-content: center;
   line-height: 1;
-  min-width: 18px;
+  min-width: 14px;
   padding: 2px 5px;
   position: absolute;
   right: 5px;
   top: 5px;
+}
+
+.month-edit-pill {
+  bottom: 5px;
+  position: absolute;
+  right: 5px;
+}
+
+.month-day-events {
+  align-self: end;
+  display: grid;
+  gap: 3px;
+}
+
+.month-event-chip {
+  align-items: center;
+  background: var(--event-color);
+  color: var(--surface);
+  display: grid;
+  font-size: 9px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  line-height: 1;
+  min-height: 15px;
+  overflow: hidden;
+  padding: 2px 3px 2px 5px;
+}
+
+.month-event-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.month-event-chip .mini-edit-pill {
+  color: var(--ink);
+  min-height: 13px;
+  padding: 1px 4px;
 }
 
 .printer-title {
@@ -1290,20 +1333,20 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  height: calc((var(--duration-hours) * var(--hour-height)) - 8px);
+  height: calc(var(--duration-hours) * var(--hour-height));
   left: calc(
-    (var(--day-index) * var(--calendar-day-width)) + var(--card-gap) +
+    (var(--day-index) * var(--calendar-day-width)) +
       (
         var(--lane-index) *
-          ((var(--calendar-day-width) - (var(--card-gap) * 2)) / var(--lane-count))
+          (var(--calendar-day-width) / var(--lane-count))
       )
   );
   overflow: hidden;
   padding: 8px;
   position: absolute;
-  top: calc((var(--start-hour) * var(--hour-height)) + 4px);
+  top: calc(var(--start-hour) * var(--hour-height));
   width: calc(
-    (var(--calendar-day-width) - (var(--card-gap) * 2)) / var(--lane-count)
+    var(--calendar-day-width) / var(--lane-count)
   );
 }
 
@@ -1386,7 +1429,7 @@ h2 {
 .card-topline button {
   align-items: center;
   background: rgba(255, 255, 255, 0.3);
-  border: 0.75px solid var(--line);
+  border: 0;
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
@@ -1514,7 +1557,7 @@ h2 {
 
 .card-actions button {
   background: rgba(255, 255, 255, 0.3);
-  border: 0.75px solid var(--line);
+  border: 0;
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
@@ -1538,7 +1581,6 @@ h2 {
 .mobile-print-card.is-failed .mobile-edit-button,
 .month-print-chip.is-failed .month-printer-pill {
   background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.62);
   color: var(--surface);
 }
 
@@ -1903,7 +1945,7 @@ h2 {
   background: var(--surface);
   border: 1px solid var(--line);
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-height: 170px;
   padding: 8px;
 }
@@ -1914,6 +1956,8 @@ h2 {
   display: flex;
   font-size: 12px;
   justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
   text-transform: none;
 }
 
@@ -1924,7 +1968,7 @@ h2 {
 .project-column-heading span {
   align-items: center;
   background: var(--surface);
-  border: 1px solid var(--line-soft);
+  border: 0;
   color: var(--ink);
   display: inline-flex;
   height: 24px;
@@ -1970,17 +2014,13 @@ h2 {
   background: transparent;
   border: 0;
   color: var(--ink);
-  cursor: grab;
+  cursor: pointer;
   display: grid;
   font: inherit;
   grid-template-columns: minmax(0, 1fr) 18px;
   min-height: 54px;
   padding: 0;
   text-align: left;
-}
-
-.project-summary:active {
-  cursor: grabbing;
 }
 
 .project-card-main {
@@ -2011,12 +2051,12 @@ h2 {
 }
 
 .kanban-project-summary {
-  cursor: default;
-  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) 16px;
 }
 
 .kanban-project-summary .project-card-main {
-  gap: 8px;
+  gap: 7px;
 }
 
 .kanban-project-summary strong {
@@ -2034,10 +2074,16 @@ h2 {
   white-space: nowrap;
 }
 
+.kanban-project-status {
+  color: var(--ink);
+  display: block;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
 .kanban-run-list {
-  border-top: 1px solid var(--line);
   display: grid;
-  gap: 0;
+  gap: 6px;
 }
 
 .kanban-run-item {
@@ -2046,11 +2092,7 @@ h2 {
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) auto;
-  padding: 8px 0;
-}
-
-.kanban-run-item + .kanban-run-item {
-  border-top: 1px solid var(--line);
+  padding: 0;
 }
 
 .kanban-run-item:active {
@@ -2081,16 +2123,16 @@ h2 {
 .kanban-run-edit {
   display: grid;
   gap: 8px;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 30px minmax(0, 1fr);
   grid-column: 1 / -1;
 }
 
 .kanban-run-edit .project-color-input {
   grid-column: 1;
   grid-row: 1;
-  height: 22px;
-  min-height: 22px;
-  width: 22px;
+  height: 30px;
+  min-height: 30px;
+  width: 30px;
 }
 
 .kanban-run-edit select,
@@ -2113,6 +2155,11 @@ h2 {
 .kanban-project-field {
   grid-column: 2;
   grid-row: 2;
+}
+
+.kanban-deadline-field {
+  grid-column: 2;
+  grid-row: 3;
 }
 
 .kanban-edit-actions {

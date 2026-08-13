@@ -11,11 +11,13 @@ export type StoredPlannerState = {
   materialStockKg: number;
   manualProductInventory: Record<string, number>;
   manualProjectStages?: Record<string, string>;
+  manualRunStages?: Record<string, string>;
   productData: Product[];
   projectColors?: Record<string, string>;
   runs: PrintRun[];
   shippingBoxStock?: Record<string, number>;
   shippedInventoryProjectIds?: string[];
+  shippedInventoryRunIds?: string[];
   timelineEvents: Array<{
     color?: string;
     endDateTime: string;

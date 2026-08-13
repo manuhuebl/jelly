@@ -1962,6 +1962,14 @@ h2 {
   border-color: var(--project-color);
 }
 
+.kanban-run-row {
+  cursor: grab;
+}
+
+.kanban-run-row:active {
+  cursor: grabbing;
+}
+
 .project-summary {
   background: transparent;
   border: 0;
@@ -2004,6 +2012,70 @@ h2 {
 .project-summary strong {
   font-size: 20px;
   line-height: 1.05;
+}
+
+.kanban-run-summary {
+  cursor: grab;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.kanban-run-summary .project-card-main {
+  gap: 8px;
+}
+
+.kanban-run-summary strong {
+  font-size: 16px;
+  white-space: normal;
+}
+
+.kanban-project-title {
+  color: var(--ink);
+  display: block;
+  font-size: 13px;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kanban-run-edit {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 22px minmax(0, 1fr);
+}
+
+.kanban-run-edit .project-color-input {
+  grid-column: 1;
+  grid-row: 1;
+  height: 22px;
+  min-height: 22px;
+  width: 22px;
+}
+
+.kanban-run-edit select,
+.kanban-run-edit input:not([type="color"]) {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  min-height: 30px;
+  padding: 4px 6px;
+  width: 100%;
+}
+
+.kanban-product-field {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.kanban-project-field {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.kanban-edit-actions {
+  grid-column: 1 / -1;
 }
 
 .material-card .material-amount {

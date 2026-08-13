@@ -173,8 +173,8 @@ type NativeDragPayload =
       kind: "new-print";
     }
   | {
-      kind: "project";
-      projectId: string;
+      kind: "kanban-run";
+      runId: string;
     };
 
 type PendingWeekendAction =
@@ -323,11 +323,24 @@ type ProjectEditForm = {
   title: string;
 };
 
+type RunEditForm = {
+  color: string;
+  productId: Product["id"];
+  project: string;
+};
+
 type ProjectOverviewRow = {
   deadline: Date | null;
   id: string;
   project: string;
   runs: ScheduledRun[];
+};
+
+type KanbanRunRow = ScheduledRun & {
+  deadline: Date | null;
+  index: number;
+  projectKey: string;
+  total: number;
 };
 
 function asDate(value: string) {
@@ -780,7 +793,7 @@ function getRunsForDay(
   const dayEnd = addDays(dayStart, 1);
 
   return getScheduledRuns(runs, productMap)
-    .filter((entry) => entry.start < dayEnd && entry.end > dayStart)
+    .filter((entry) => entry.start >= dayStart && entry.start < dayEnd)
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
@@ -996,6 +1009,79 @@ function getProjectStage(
   }
 
   return automaticStage;
+}
+
+function getAutomaticRunStage(entry: ScheduledRun, now: Date): ProjectStage {
+  if (entry.run.status === "printing" && entry.end > now) {
+    return "printing";
+  }
+
+  if (entry.run.status === "finished" || isRunAwaitingReview(entry, now)) {
+    return "ready";
+  }
+
+  return "planned";
+}
+
+function getRunStage(
+  entry: ScheduledRun,
+  manualStages: Record<string, ProjectStage>,
+  now: Date
+): ProjectStage {
+  const automaticStage = getAutomaticRunStage(entry, now);
+  const manualStage = manualStages[entry.run.id];
+
+  if (automaticStage === "printing") {
+    return "printing";
+  }
+
+  if (manualStage) {
+    return manualStage;
+  }
+
+  return automaticStage;
+}
+
+function getKanbanRunRows(
+  runs: PrintRun[],
+  events: TimelineEvent[],
+  productMap: Map<string, Product>
+): KanbanRunRow[] {
+  const projects = getProjectOverviewRows(runs, events, productMap);
+  const deadlinesByProject = new Map(
+    projects.map((project) => [project.id, project.deadline])
+  );
+  const scheduledRuns = getScheduledRuns(runs, productMap);
+  const totalsByProject = scheduledRuns.reduce<Record<string, number>>((totals, entry) => {
+    const projectKey = getProjectKey(entry.run.project);
+
+    if (!projectKey) {
+      return totals;
+    }
+
+    totals[projectKey] = (totals[projectKey] ?? 0) + 1;
+    return totals;
+  }, {});
+  const indexesByProject: Record<string, number> = {};
+
+  return scheduledRuns
+    .sort(
+      (a, b) =>
+        getProjectKey(a.run.project).localeCompare(getProjectKey(b.run.project)) ||
+        a.start.getTime() - b.start.getTime()
+    )
+    .map((entry) => {
+      const projectKey = getProjectKey(entry.run.project);
+      indexesByProject[projectKey] = (indexesByProject[projectKey] ?? 0) + 1;
+
+      return {
+        ...entry,
+        deadline: deadlinesByProject.get(projectKey) ?? null,
+        index: indexesByProject[projectKey],
+        projectKey,
+        total: totalsByProject[projectKey] ?? 1
+      };
+    });
 }
 
 function buildStartDateTime(date: string, time: string) {
@@ -1557,7 +1643,16 @@ export function WeekPlanner() {
   const [manualProjectStages, setManualProjectStages] = useState<
     Record<string, ProjectStage>
   >({});
+  const [manualRunStages, setManualRunStages] = useState<Record<string, ProjectStage>>(
+    {}
+  );
   const [projectColors, setProjectColors] = useState<Record<string, string>>({});
+  const [editingKanbanRunId, setEditingKanbanRunId] = useState<string | null>(null);
+  const [kanbanRunEdit, setKanbanRunEdit] = useState<RunEditForm>({
+    color: "",
+    productId: "",
+    project: ""
+  });
   const [editingInventoryProductId, setEditingInventoryProductId] = useState<string | null>(
     null
   );
@@ -1576,6 +1671,9 @@ export function WeekPlanner() {
   const [shippedInventoryProjectIds, setShippedInventoryProjectIds] = useState<
     Set<string>
   >(() => new Set());
+  const [shippedInventoryRunIds, setShippedInventoryRunIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [pendingProjectRemoval, setPendingProjectRemoval] =
     useState<ProjectOverviewRow | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -1682,14 +1780,17 @@ export function WeekPlanner() {
   const projectRows = getProjectOverviewRows(runs, timelineEvents, productById).filter(
     (project) => !hiddenProjectIds.has(project.id)
   );
-  const projectRowsByStage = PROJECT_STAGES.reduce(
+  const kanbanRows = getKanbanRunRows(runs, timelineEvents, productById).filter(
+    (entry) => !hiddenProjectIds.has(entry.projectKey)
+  );
+  const kanbanRowsByStage = PROJECT_STAGES.reduce(
     (groups, stage) => ({
       ...groups,
-      [stage.id]: projectRows.filter(
-        (project) => getProjectStage(project, manualProjectStages, now) === stage.id
+      [stage.id]: kanbanRows.filter(
+        (entry) => getRunStage(entry, manualRunStages, now) === stage.id
       )
     }),
-    {} as Record<ProjectStage, ProjectOverviewRow[]>
+    {} as Record<ProjectStage, KanbanRunRow[]>
   );
   const pendingStartRun = pendingStartRunId
     ? runs.find((run) => run.id === pendingStartRunId)
@@ -1719,11 +1820,22 @@ export function WeekPlanner() {
         setManualProjectStages(
           (loadedState.state.manualProjectStages ?? {}) as Record<string, ProjectStage>
         );
+        setManualRunStages(
+          (loadedState.state.manualRunStages ?? {}) as Record<string, ProjectStage>
+        );
         setProjectColors(loadedState.state.projectColors ?? {});
         setShippingBoxStock(normalizeShippingBoxStock(loadedState.state.shippingBoxStock));
-        setShippedInventoryProjectIds(
-          new Set(loadedState.state.shippedInventoryProjectIds ?? [])
+        const legacyShippedProjectIds = new Set(
+          loadedState.state.shippedInventoryProjectIds ?? []
         );
+        const nextShippedRunIds = new Set(loadedState.state.shippedInventoryRunIds ?? []);
+        loadedState.state.runs.forEach((run) => {
+          if (legacyShippedProjectIds.has(getProjectKey(run.project))) {
+            nextShippedRunIds.add(run.id);
+          }
+        });
+        setShippedInventoryProjectIds(legacyShippedProjectIds);
+        setShippedInventoryRunIds(nextShippedRunIds);
         setManualProductInventory(loadedState.state.manualProductInventory);
       }
 
@@ -1758,11 +1870,13 @@ export function WeekPlanner() {
       materialStockKg,
       manualProductInventory,
       manualProjectStages,
+      manualRunStages,
       productData,
       projectColors,
       runs,
       shippingBoxStock,
       shippedInventoryProjectIds: [...shippedInventoryProjectIds],
+      shippedInventoryRunIds: [...shippedInventoryRunIds],
       timelineEvents
     };
 
@@ -1786,11 +1900,13 @@ export function WeekPlanner() {
     materialStockKg,
     manualProductInventory,
     manualProjectStages,
+    manualRunStages,
     productData,
     projectColors,
     runs,
     shippingBoxStock,
     shippedInventoryProjectIds,
+    shippedInventoryRunIds,
     timelineEvents
   ]);
 
@@ -1804,6 +1920,20 @@ export function WeekPlanner() {
     });
   }
 
+  function showSavedNotice() {
+    const nextNotice: Notice = {
+      title: "Saved",
+      body: "Changes saved.",
+      tone: "neutral"
+    };
+
+    setNotice(nextNotice);
+
+    window.setTimeout(() => {
+      setNotice((current) => (current === nextNotice ? null : current));
+    }, 1400);
+  }
+
   function savePlannerSnapshot(nextRuns: PrintRun[]) {
     const state: StoredPlannerState = {
       customMaterials,
@@ -1811,11 +1941,13 @@ export function WeekPlanner() {
       materialStockKg,
       manualProductInventory,
       manualProjectStages,
+      manualRunStages,
       productData,
       projectColors,
       runs: nextRuns,
       shippingBoxStock,
       shippedInventoryProjectIds: [...shippedInventoryProjectIds],
+      shippedInventoryRunIds: [...shippedInventoryRunIds],
       timelineEvents
     };
 
@@ -1942,6 +2074,7 @@ export function WeekPlanner() {
 
     setMaterialStockKg(Number(nextKg.toFixed(1)));
     setIsMaterialEditOpen(false);
+    showSavedNotice();
   }
 
   function openBoxEdit(boxType: ShippingBoxType) {
@@ -1964,6 +2097,7 @@ export function WeekPlanner() {
     }));
     setEditingBoxType(null);
     setBoxEditCount("");
+    showSavedNotice();
   }
 
   function addCustomMaterial(event: FormEvent<HTMLFormElement>) {
@@ -1992,6 +2126,7 @@ export function WeekPlanner() {
       type: ""
     });
     setIsMaterialCreateOpen(false);
+    showSavedNotice();
   }
 
   function toggleProject(projectId: string) {
@@ -2227,6 +2362,67 @@ export function WeekPlanner() {
     });
 
     cancelProjectEdit();
+    showSavedNotice();
+  }
+
+  function openKanbanRunEdit(entry: KanbanRunRow) {
+    setEditingKanbanRunId(entry.run.id);
+    setKanbanRunEdit({
+      color: getProjectColor(entry.run.project, projectColors) ?? "",
+      productId: entry.run.productId,
+      project: entry.run.project
+    });
+  }
+
+  function cancelKanbanRunEdit() {
+    setEditingKanbanRunId(null);
+    setKanbanRunEdit({
+      color: "",
+      productId: "",
+      project: ""
+    });
+  }
+
+  function saveKanbanRunEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingKanbanRunId) {
+      return;
+    }
+
+    const nextProject = kanbanRunEdit.project.trim().toLowerCase();
+    const nextProjectKey = getProjectKey(nextProject);
+
+    if (!nextProjectKey || !kanbanRunEdit.productId) {
+      return;
+    }
+
+    setRuns((current) =>
+      current.map((run) =>
+        run.id === editingKanbanRunId
+          ? {
+              ...run,
+              productId: kanbanRunEdit.productId,
+              project: nextProject
+            }
+          : run
+      )
+    );
+
+    setProjectColors((current) => {
+      const next = { ...current };
+
+      if (kanbanRunEdit.color) {
+        next[nextProjectKey] = kanbanRunEdit.color;
+      } else {
+        delete next[nextProjectKey];
+      }
+
+      return next;
+    });
+
+    cancelKanbanRunEdit();
+    showSavedNotice();
   }
 
   function updateProductData(
@@ -2290,6 +2486,7 @@ export function WeekPlanner() {
     if (editingInventoryProductId === productId) {
       setEditingInventoryProductId(null);
       setSavedInventoryProductId(productId);
+      showSavedNotice();
       return;
     }
 
@@ -2302,6 +2499,7 @@ export function WeekPlanner() {
     if (editingProductDataId === productId) {
       setEditingProductDataId(null);
       setSavedProductDataId(productId);
+      showSavedNotice();
       return;
     }
 
@@ -2486,6 +2684,7 @@ export function WeekPlanner() {
 
     setSelectedRunId(null);
     setEditPrint(null);
+    showSavedNotice();
   }
 
   function saveEdit(event: FormEvent<HTMLFormElement>) {
@@ -2616,6 +2815,7 @@ export function WeekPlanner() {
     );
     setSelectedEventId(null);
     setEditEvent(null);
+    showSavedNotice();
   }
 
   function saveDeadlineEdit(event: FormEvent<HTMLFormElement>) {
@@ -2625,14 +2825,15 @@ export function WeekPlanner() {
       return;
     }
 
+    const selectedProjectKey = getProjectKey(selectedDeadline.project);
+    const nextDeadline = buildStartDateTime(editDeadlineDate, "18:00");
+
     setRuns((current) =>
       current.map((run) =>
-        run.project === selectedDeadline.project &&
-        run.customerDeadline &&
-        formatDateTimeInputDate(run.customerDeadline) === selectedDeadline.originalDate
+        getProjectKey(run.project) === selectedProjectKey
           ? {
               ...run,
-              customerDeadline: buildStartDateTime(editDeadlineDate, "18:00")
+              customerDeadline: nextDeadline
             }
           : run
       )
@@ -2641,20 +2842,22 @@ export function WeekPlanner() {
       current.map((event) => {
         const project =
           event.deadlineProject ?? event.title.replace(/^deadline\s+/i, "").trim();
+        const projectKey = getProjectKey(project);
 
-        return event.type === "deadline" && project === selectedDeadline.project
+        return event.type === "deadline" && projectKey === selectedProjectKey
           ? {
               ...event,
-              deadlineProject: selectedDeadline.project,
+              deadlineProject: project,
               endDateTime: buildStartDateTime(editDeadlineDate, "22:00"),
               startDateTime: buildStartDateTime(editDeadlineDate, "18:00"),
-              title: `deadline ${selectedDeadline.project}`
+              title: `deadline ${project}`
             }
           : event;
       })
     );
     setSelectedDeadline(null);
     setEditDeadlineDate("");
+    showSavedNotice();
   }
 
   function requestDeletePrint() {
@@ -2750,12 +2953,10 @@ export function WeekPlanner() {
 
   function updateRunStatus(run: PrintRun, status: JobStatus, startDateTime?: string) {
     const product = productById.get(run.productId);
-    const projectKey = getProjectKey(run.project);
-    const isProjectAlreadyShipped =
-      projectKey.length > 0 && shippedInventoryProjectIds.has(projectKey);
+    const isRunAlreadyShipped = shippedInventoryRunIds.has(run.id);
 
     if (status === "finished" && run.status !== "finished" && product) {
-      if (!isProjectAlreadyShipped) {
+      if (!isRunAlreadyShipped) {
         adjustManualProductStock(new Map([[product.id, 1]]), "add");
       }
 
@@ -3213,7 +3414,7 @@ export function WeekPlanner() {
   function handleBoardDrop(event: DragEvent<HTMLElement>) {
     const dragMeta = nativeDragRef.current;
 
-    if (!dragMeta || dragMeta.kind === "project") {
+    if (!dragMeta || dragMeta.kind === "kanban-run") {
       return;
     }
 
@@ -3307,17 +3508,17 @@ export function WeekPlanner() {
     moveRun(run, run.printerId, nextStart);
   }
 
-  function handleProjectDragStart(event: DragEvent<HTMLElement>, projectId: string) {
+  function handleKanbanRunDragStart(event: DragEvent<HTMLElement>, runId: string) {
     nativeDragRef.current = {
-      kind: "project",
-      projectId
+      kind: "kanban-run",
+      runId
     };
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", `project:${projectId}`);
+    event.dataTransfer.setData("text/plain", `kanban-run:${runId}`);
   }
 
   function handleProjectStageDragOver(event: DragEvent<HTMLElement>) {
-    if (nativeDragRef.current?.kind !== "project") {
+    if (nativeDragRef.current?.kind !== "kanban-run") {
       return;
     }
 
@@ -3325,44 +3526,32 @@ export function WeekPlanner() {
     event.dataTransfer.dropEffect = "move";
   }
 
-  function getFinishedProductCountsForProject(projectId: string) {
-    const project = projectRows.find((row) => row.id === projectId);
-
-    if (!project) {
-      return new Map<Product["id"], number>();
-    }
-
-    return project.runs.reduce<Map<Product["id"], number>>((counts, entry) => {
-      if (entry.run.status !== "finished") {
-        return counts;
-      }
-
-      counts.set(entry.product.id, (counts.get(entry.product.id) ?? 0) + 1);
-
-      return counts;
-    }, new Map());
-  }
-
   function handleProjectStageDrop(event: DragEvent<HTMLElement>, stage: ProjectStage) {
     const dragMeta = nativeDragRef.current;
 
-    if (dragMeta?.kind !== "project") {
+    if (dragMeta?.kind !== "kanban-run") {
       return;
     }
 
     event.preventDefault();
     nativeDragRef.current = null;
 
-    const productCounts = getFinishedProductCountsForProject(dragMeta.projectId);
-    const wasShipped = shippedInventoryProjectIds.has(dragMeta.projectId);
+    const runEntry = kanbanRows.find((entry) => entry.run.id === dragMeta.runId);
+
+    if (!runEntry) {
+      return;
+    }
+
+    const productCounts = new Map<Product["id"], number>([[runEntry.product.id, 1]]);
+    const wasShipped = shippedInventoryRunIds.has(dragMeta.runId);
     const willBeShipped = stage === "shipped";
 
-    if (willBeShipped && !wasShipped) {
+    if (willBeShipped && !wasShipped && runEntry.run.status === "finished") {
       adjustManualProductStock(productCounts, "subtract");
 
-      setShippedInventoryProjectIds((current) => {
+      setShippedInventoryRunIds((current) => {
         const next = new Set(current);
-        next.add(dragMeta.projectId);
+        next.add(dragMeta.runId);
         return next;
       });
     }
@@ -3370,19 +3559,19 @@ export function WeekPlanner() {
     if (!willBeShipped && wasShipped) {
       adjustManualProductStock(productCounts, "add");
 
-      setShippedInventoryProjectIds((current) => {
+      setShippedInventoryRunIds((current) => {
         const next = new Set(current);
-        next.delete(dragMeta.projectId);
+        next.delete(dragMeta.runId);
         return next;
       });
     }
 
-    setManualProjectStages((current) => {
+    setManualRunStages((current) => {
       const next = {
         ...current
       };
 
-      next[dragMeta.projectId] = stage;
+      next[dragMeta.runId] = stage;
 
       return next;
     });
@@ -4702,184 +4891,120 @@ export function WeekPlanner() {
             >
               <div className="project-column-heading">
                 <strong>{stage.label}</strong>
-                <span>{projectRowsByStage[stage.id].length}</span>
+                <span>{kanbanRowsByStage[stage.id].length}</span>
               </div>
               <div className="project-column-list">
-                {projectRowsByStage[stage.id].map((project) => {
-                  const isExpanded = expandedProjectIds.has(project.id);
-                  const projectColor = getProjectColor(project.project, projectColors);
-                  const sortedProjectRuns = [...project.runs].sort(
-                    (a, b) =>
-                      a.product.name.localeCompare(b.product.name) ||
-                      a.start.getTime() - b.start.getTime()
-                  );
+                {kanbanRowsByStage[stage.id].map((entry) => {
+                  const projectColor = getProjectColor(entry.run.project, projectColors);
+                  const isEditing = editingKanbanRunId === entry.run.id;
+                  const hasProjectGroup = entry.total > 1;
 
                   return (
                     <article
-                      className={`project-row ${projectColor ? "has-project-color" : ""}`}
-                      draggable
-                      key={project.id}
+                      className={`project-row kanban-run-row ${
+                        projectColor ? "has-project-color" : ""
+                      }`}
+                      draggable={!isEditing}
+                      key={entry.run.id}
                       onDragEnd={handlePrintDragEnd}
-                      onDragStart={(event) => handleProjectDragStart(event, project.id)}
+                      onDragStart={(event) =>
+                        handleKanbanRunDragStart(event, entry.run.id)
+                      }
                       style={
                         {
                           "--project-color": projectColor ?? "#1f1f1d"
                         } as CSSProperties & { "--project-color": string }
                       }
                     >
-                      <button
-                        className="project-summary"
-                        draggable
-                        onClick={() => toggleProject(project.id)}
-                        onDragEnd={handlePrintDragEnd}
-                        onDragStart={(event) => handleProjectDragStart(event, project.id)}
-                        type="button"
-                      >
-                        <span className="project-card-main">
-                          <strong>{project.project}</strong>
-                          <span className="project-meta">
-                            <em>{project.runs.length}</em>
-                            {project.deadline ? (
-                              <small>by {formatCompactDate(project.deadline)}</small>
-                            ) : null}
-                          </span>
-                        </span>
-                        <span
-                          className={`project-arrow ${isExpanded ? "is-open" : ""}`}
-                          aria-hidden="true"
-                        />
-                      </button>
-                      {isExpanded ? (
-                        <div className="project-details">
-                          {editingProjectId === project.id ? (
-                            <form
-                              className="project-edit-form"
-                              onSubmit={saveProjectEdit}
+                      {isEditing ? (
+                        <form className="kanban-run-edit" onSubmit={saveKanbanRunEdit}>
+                          <input
+                            aria-label="Project color"
+                            className={`project-color-input kanban-color-input ${
+                              kanbanRunEdit.color ? "" : "is-empty"
+                            }`}
+                            type="color"
+                            value={kanbanRunEdit.color || "#ffffff"}
+                            onChange={(event) =>
+                              setKanbanRunEdit((current) => ({
+                                ...current,
+                                color: event.target.value
+                              }))
+                            }
+                          />
+                          <select
+                            aria-label="Product"
+                            className="kanban-product-field"
+                            value={kanbanRunEdit.productId}
+                            onChange={(event) =>
+                              setKanbanRunEdit((current) => ({
+                                ...current,
+                                productId: event.target.value
+                              }))
+                            }
+                          >
+                            {visibleProducts.map((product) => (
+                              <option key={product.id} value={product.id}>
+                                {product.name}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            aria-label="Project"
+                            className="kanban-project-field"
+                            value={kanbanRunEdit.project}
+                            onChange={(event) =>
+                              setKanbanRunEdit((current) => ({
+                                ...current,
+                                project: event.target.value
+                              }))
+                            }
+                          />
+                          <div className="project-detail-actions kanban-edit-actions">
+                            <button
+                              className="mini-edit-pill project-remove-button"
+                              disabled={!kanbanRunEdit.project.trim()}
+                              type="submit"
                             >
-                              <label>
-                                <span>project</span>
-                                <input
-                                  autoFocus
-                                  value={projectEdit.title}
-                                  onChange={(event) =>
-                                    setProjectEdit((current) => ({
-                                      ...current,
-                                      title: event.target.value
-                                    }))
-                                  }
-                                />
-                              </label>
-                              <label>
-                                <span>color</span>
-                                <div className="project-color-field">
-                                  <input
-                                    aria-label="Project color"
-                                    className={`project-color-input ${
-                                      projectEdit.color ? "" : "is-empty"
-                                    }`}
-                                    type="color"
-                                    value={projectEdit.color || "#ffffff"}
-                                    onChange={(event) =>
-                                      setProjectEdit((current) => ({
-                                        ...current,
-                                        color: event.target.value
-                                      }))
-                                    }
-                                  />
-                                </div>
-                              </label>
-                              <div className="project-edit-products">
-                                <span>products</span>
-                                {sortedProjectRuns.map((entry, entryIndex) => {
-                                  const editedProductId =
-                                    projectEdit.products.find(
-                                      (productEntry) => productEntry.runId === entry.run.id
-                                    )?.productId ?? entry.run.productId;
-
-                                  return (
-                                    <label
-                                      className="project-edit-product-row"
-                                      key={entry.run.id}
-                                    >
-                                      <small>Product {entryIndex + 1}</small>
-                                      <select
-                                        value={editedProductId}
-                                        onChange={(event) =>
-                                          updateProjectEditProduct(
-                                            entry.run.id,
-                                            event.target.value
-                                          )
-                                        }
-                                      >
-                                        {visibleProducts.map((product) => (
-                                          <option key={product.id} value={product.id}>
-                                            {product.name}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                              <div className="project-edit-actions">
-                                <button
-                                  className="mini-edit-pill project-remove-button"
-                                  disabled={!projectEdit.title.trim()}
-                                  type="submit"
-                                >
-                                  save
-                                </button>
-                                <button
-                                  aria-label="Cancel project edit"
-                                  className="icon-button"
-                                  onClick={cancelProjectEdit}
-                                  type="button"
-                                />
-                              </div>
-                            </form>
-                          ) : (
-                            <>
-                              {project.runs.length === 0 ? (
-                                <span>no prints yet</span>
-                              ) : (
-                                sortedProjectRuns.map((entry) => (
-                                  <span
-                                    className={`project-detail-row ${
-                                      entry.run.status === "finished" ? "is-done" : ""
-                                    }`}
-                                    key={entry.run.id}
-                                  >
-                                    <span className="project-detail-copy">
-                                      <strong>{entry.product.name}</strong>
-                                      <small>
-                                        {formatCompactDate(entry.start)}{" "}
-                                        {formatTime(entry.start)}-{formatTime(entry.end)}
-                                      </small>
-                                    </span>
-                                    {entry.run.status === "finished" ? <em>done</em> : null}
-                                  </span>
-                                ))
-                              )}
-                              <div className="project-detail-actions">
-                                <button
-                                  className="mini-edit-pill project-remove-button"
-                                  onClick={() => openProjectEdit(project)}
-                                  type="button"
-                                >
-                                  edit
-                                </button>
-                                <button
-                                  className="mini-edit-pill project-remove-button"
-                                  onClick={() => requestProjectRemoval(project)}
-                                  type="button"
-                                >
-                                  archive
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ) : null}
+                              save
+                            </button>
+                            <button
+                              aria-label="Cancel print edit"
+                              className="icon-button"
+                              onClick={cancelKanbanRunEdit}
+                              type="button"
+                            />
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="project-summary kanban-run-summary">
+                            <span className="project-card-main">
+                              <strong>
+                                {entry.product.name}
+                                {hasProjectGroup
+                                  ? ` (${entry.index}/${entry.total})`
+                                  : ""}
+                                {entry.deadline
+                                  ? ` by ${formatCompactDate(entry.deadline)}`
+                                  : ""}
+                              </strong>
+                              <span className="kanban-project-title">
+                                {entry.run.project}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="project-detail-actions">
+                            <button
+                              className="mini-edit-pill project-remove-button"
+                              onClick={() => openKanbanRunEdit(entry)}
+                              type="button"
+                            >
+                              edit
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </article>
                   );
                 })}

@@ -442,7 +442,8 @@ h2 {
 .inventory-popup .popup-close,
 .box-popup .popup-close,
 .notice-popup .popup-close {
-  filter: invert(1);
+  filter: brightness(0) invert(1) contrast(2);
+  opacity: 1;
 }
 
 .notice-popup.is-neutral .popup-close {
@@ -743,8 +744,8 @@ h2 {
   align-items: center;
   border-bottom: 1px solid var(--line);
   display: flex;
-  min-height: 34px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 8px 12px;
 }
 
 .material-heading .eyebrow {
@@ -1843,7 +1844,7 @@ h2 {
 .project-overview .eyebrow,
 .inventory-summary .eyebrow {
   font-size: 13px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 .project-overview > .eyebrow {
@@ -1851,8 +1852,8 @@ h2 {
   border-bottom: 1px solid var(--line);
   display: flex;
   margin-bottom: 0;
-  min-height: 34px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 8px 12px;
 }
 
 .project-list {
@@ -1872,7 +1873,7 @@ h2 {
 
 .project-column {
   align-content: start;
-  background: var(--surface-muted);
+  background: #f1f2ef;
   border: 1px solid var(--line);
   display: grid;
   gap: 10px;
@@ -1928,6 +1929,10 @@ h2 {
 .project-column .project-row {
   background: var(--surface);
   border: 1px solid var(--project-color, var(--line));
+}
+
+.project-column .project-row.has-project-color {
+  background: #f1f2ef;
 }
 
 .project-summary {
@@ -2150,12 +2155,13 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--surface);
+  container-type: inline-size;
   cursor: default;
   font: inherit;
   left: var(--timeline-left);
   min-height: 20px;
   overflow: hidden;
-  padding: 4px 34px 4px 8px;
+  padding: 4px 40px 4px 8px;
   position: absolute;
   text-align: left;
   top: var(--timeline-top);
@@ -2191,20 +2197,36 @@ h2 {
 }
 
 .timeline-edit-button {
+  background: rgba(255, 255, 255, 0.18);
+  border: 0;
+  border-left: 0.75px solid var(--line);
+  border-radius: 0;
+  bottom: 0;
+  height: auto;
+  min-height: 0;
+  padding: 0 8px;
   position: absolute;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
+  transform: none;
+  width: 38px;
 }
 
 .timeline-item.type-deadline .timeline-edit-button {
   background: var(--surface);
-  border-color: var(--surface);
+  border: 0;
+  border-left: 0.75px solid var(--line);
   color: var(--ink);
   font-size: 8px;
-  min-height: 16px;
-  padding: 1px 5px;
-  right: 4px;
+  min-height: 0;
+  padding: 0 6px;
+  right: 0;
+}
+
+@container (max-width: 120px) {
+  .timeline-item > span {
+    display: none;
+  }
 }
 
 .empty-timeline {
@@ -2231,8 +2253,12 @@ h2 {
 .product-inventory .section-heading {
   align-items: center;
   border-bottom: 1px solid var(--line);
-  min-height: 34px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.product-inventory .eyebrow {
+  margin-bottom: 0;
 }
 
 .product-inventory > .stock-list {

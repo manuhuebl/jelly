@@ -1003,7 +1003,7 @@ function getProjectStage(
     return "printing";
   }
 
-  if (manualStage === "packed" || manualStage === "shipped") {
+  if (manualStage) {
     return manualStage;
   }
 
@@ -3158,11 +3158,7 @@ export function WeekPlanner() {
         ...current
       };
 
-      if (stage === "planned" || stage === "printing" || stage === "ready") {
-        delete next[dragMeta.projectId];
-      } else {
-        next[dragMeta.projectId] = stage;
-      }
+      next[dragMeta.projectId] = stage;
 
       return next;
     });

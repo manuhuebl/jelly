@@ -254,6 +254,47 @@ type NewMaterialForm = {
   type: string;
 };
 
+const materialNameHints = [
+  "bubble",
+  "paper",
+  "snippet",
+  "snippets",
+  "wrap",
+  "foil",
+  "folie"
+];
+
+const materialTypeHints = [
+  "bag",
+  "bags",
+  "box",
+  "boxes",
+  "pack",
+  "packs",
+  "roll",
+  "rolls",
+  "sheet",
+  "sheets"
+];
+
+function getCustomMaterialDisplay(material: CustomMaterial): CustomMaterial {
+  const type = material.type.toLowerCase();
+  const specification = material.specification.toLowerCase();
+  const looksSwapped =
+    materialNameHints.some((hint) => type.includes(hint)) &&
+    materialTypeHints.some((hint) => specification.includes(hint));
+
+  if (!looksSwapped) {
+    return material;
+  }
+
+  return {
+    ...material,
+    specification: material.type,
+    type: material.specification
+  };
+}
+
 type NewEventForm = {
   customColor: string;
   customLabel: string;
@@ -2311,12 +2352,14 @@ export function WeekPlanner() {
   }
 
   function openCustomMaterialEdit(material: CustomMaterial) {
+    const displayMaterial = getCustomMaterialDisplay(material);
+
     setIsMaterialCreateOpen(false);
     setEditingCustomMaterialId(material.id);
     setCustomMaterialEdit({
-      count: String(material.count),
-      specification: material.specification,
-      type: material.type
+      count: String(displayMaterial.count),
+      specification: displayMaterial.specification,
+      type: displayMaterial.type
     });
   }
 
@@ -5711,88 +5754,94 @@ export function WeekPlanner() {
                 )}
               </article>
             ))}
-            {customMaterials.map((material) => (
-              <article className="shipping-box-row" key={material.id}>
-                {editingCustomMaterialId === material.id ? (
-                  <form className="custom-material-edit" onSubmit={saveCustomMaterialEdit}>
-                    <div className="custom-material-edit-fields">
-                      <input
-                        aria-label="Material count"
-                        min="0"
-                        type="number"
-                        value={customMaterialEdit.count}
-                        onChange={(event) =>
-                          setCustomMaterialEdit((current) => ({
-                            ...current,
-                            count: event.target.value
-                          }))
-                        }
-                      />
-                      <input
-                        aria-label="Material type"
-                        value={customMaterialEdit.type}
-                        onChange={(event) =>
-                          setCustomMaterialEdit((current) => ({
-                            ...current,
-                            type: event.target.value
-                          }))
-                        }
-                      />
-                      <input
-                        aria-label="Material specification"
-                        value={customMaterialEdit.specification}
-                        onChange={(event) =>
-                          setCustomMaterialEdit((current) => ({
-                            ...current,
-                            specification: event.target.value
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="custom-material-edit-actions">
+            {customMaterials.map((material) => {
+              const displayMaterial = getCustomMaterialDisplay(material);
+
+              return (
+                <article className="shipping-box-row" key={material.id}>
+                  {editingCustomMaterialId === material.id ? (
+                    <form className="custom-material-edit" onSubmit={saveCustomMaterialEdit}>
+                      <div className="custom-material-edit-fields">
+                        <input
+                          aria-label="Material count"
+                          min="0"
+                          type="number"
+                          value={customMaterialEdit.count}
+                          onChange={(event) =>
+                            setCustomMaterialEdit((current) => ({
+                              ...current,
+                              count: event.target.value
+                            }))
+                          }
+                        />
+                        <input
+                          aria-label="Material type"
+                          placeholder="roll"
+                          value={customMaterialEdit.type}
+                          onChange={(event) =>
+                            setCustomMaterialEdit((current) => ({
+                              ...current,
+                              type: event.target.value
+                            }))
+                          }
+                        />
+                        <input
+                          aria-label="Material specification"
+                          placeholder="bubble wrap"
+                          value={customMaterialEdit.specification}
+                          onChange={(event) =>
+                            setCustomMaterialEdit((current) => ({
+                              ...current,
+                              specification: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="custom-material-edit-actions">
+                        <button
+                          disabled={
+                            !customMaterialEdit.type.trim() ||
+                            !customMaterialEdit.specification.trim()
+                          }
+                          type="submit"
+                        >
+                          save
+                        </button>
+                        <button
+                          className="mini-edit-pill custom-material-delete"
+                          onClick={() => requestDeleteCustomMaterial(material)}
+                          type="button"
+                        >
+                          delete
+                        </button>
+                        <button
+                          aria-label="Cancel material edit"
+                          className="icon-button"
+                          onClick={cancelCustomMaterialEdit}
+                          type="button"
+                        />
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div>
+                        <strong>
+                          {displayMaterial.count} {displayMaterial.type}
+                        </strong>
+                        <span>{displayMaterial.specification}</span>
+                      </div>
                       <button
-                        disabled={
-                          !customMaterialEdit.type.trim() ||
-                          !customMaterialEdit.specification.trim()
-                        }
-                        type="submit"
-                      >
-                        save
-                      </button>
-                      <button
-                        className="mini-edit-pill custom-material-delete"
-                        onClick={() => requestDeleteCustomMaterial(material)}
+                        className="mini-edit-pill material-edit-pill"
+                        onClick={() => openCustomMaterialEdit(material)}
                         type="button"
                       >
-                        delete
+                        edit
                       </button>
-                      <button
-                        aria-label="Cancel material edit"
-                        className="icon-button"
-                        onClick={cancelCustomMaterialEdit}
-                        type="button"
-                      />
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div>
-                      <strong>
-                        {material.count} {material.type}
-                      </strong>
-                      <span>{material.specification}</span>
-                    </div>
-                    <button
-                      className="mini-edit-pill material-edit-pill"
-                      onClick={() => openCustomMaterialEdit(material)}
-                      type="button"
-                    >
-                      edit
-                    </button>
-                  </>
-                )}
-              </article>
-            ))}
+                    </>
+                  )}
+                </article>
+              );
+            })}
             <button
               className="mini-edit-pill box-add-pill"
               onClick={() => {
@@ -5823,7 +5872,7 @@ export function WeekPlanner() {
               <label className="inventory-input">
                 <span>type</span>
                 <input
-                  placeholder="bubble wrap"
+                  placeholder="roll"
                   value={newMaterial.type}
                   onChange={(event) =>
                     setNewMaterial((current) => ({
@@ -5836,7 +5885,7 @@ export function WeekPlanner() {
               <label className="inventory-input">
                 <span>specification</span>
                 <input
-                  placeholder="100 m roll"
+                  placeholder="bubble wrap"
                   value={newMaterial.specification}
                   onChange={(event) =>
                     setNewMaterial((current) => ({

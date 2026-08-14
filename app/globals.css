@@ -563,16 +563,60 @@ h2 {
   padding-right: 54px;
 }
 
-.print-composer-form .wide-field {
-  grid-column: auto;
+.print-form.print-composer-form > .new-print-preview {
+  grid-column: 1;
+  grid-row: 1;
 }
 
-.print-composer-form > button[type="submit"] {
+.print-form.print-composer-form > label:nth-of-type(1) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > label:nth-of-type(2),
+.print-form.print-composer-form > label.wide-field {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > label:nth-of-type(3) {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > .form-field {
+  grid-column: 5;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > label:nth-of-type(4) {
+  grid-column: 6;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > label:nth-of-type(5) {
+  grid-column: 7;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > label:nth-of-type(6) {
+  grid-column: 8;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > label:nth-of-type(7) {
+  grid-column: 9;
+  grid-row: 1;
+}
+
+.print-form.print-composer-form > button[type="submit"] {
   align-self: start;
+  grid-column: 10;
+  grid-row: 1;
   margin-top: 15px;
 }
 
-.print-composer-form > button[type="submit"]:disabled {
+.print-form.print-composer-form > button[type="submit"]:disabled {
   background: #9b9b94;
   border-color: transparent;
   color: var(--surface);
@@ -642,6 +686,11 @@ h2 {
 
 .print-form .wide-field {
   grid-column: span 2;
+}
+
+.print-form.print-composer-form > label.wide-field {
+  grid-column: 3;
+  grid-row: 1;
 }
 
 .clearable-field {
@@ -1905,7 +1954,7 @@ h2 {
 .event-form {
   align-items: end;
   display: grid;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   margin-left: var(--time-gutter);
   width: var(--calendar-width);
@@ -1921,39 +1970,41 @@ h2 {
 .event-edit-panel {
   background: var(--surface);
   border: 1px solid var(--line);
+  gap: 12px;
   left: 50%;
   margin-left: 0;
   max-width: calc(100vw - (var(--page-padding) * 2));
-  padding: 14px 78px 14px 14px;
+  padding: 16px;
   position: fixed;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(860px, calc(100vw - (var(--page-padding) * 2)));
+  width: min(840px, calc(100vw - (var(--page-padding) * 2)));
   z-index: 35;
 }
 
 .event-edit-panel.event-form {
   grid-template-columns:
     minmax(180px, 1.6fr)
-    118px
-    118px
-    118px
-    70px
-    70px;
+    120px
+    120px
+    120px
+    90px
+    90px
+    38px;
 }
 
 .deadline-edit-panel.event-form {
-  grid-template-columns: minmax(190px, 1fr) 170px 90px;
-  width: min(620px, calc(100vw - (var(--page-padding) * 2)));
+  grid-template-columns: minmax(190px, 1fr) 170px 90px 38px;
+  width: min(600px, calc(100vw - (var(--page-padding) * 2)));
 }
 
 .event-edit-panel .icon-button {
-  height: 28px;
-  min-height: 28px;
-  position: absolute;
-  right: 14px;
-  top: 36px;
-  width: 28px;
+  align-self: end;
+  justify-self: center;
+  height: 38px;
+  min-height: 38px;
+  position: static;
+  width: 38px;
 }
 
 .event-form label {
@@ -2966,8 +3017,25 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .print-form.print-composer-form > .new-print-preview,
+  .print-form.print-composer-form > label,
+  .print-form.print-composer-form > .form-field,
+  .print-form.print-composer-form > button[type="submit"] {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
   .print-form .wide-field {
     grid-column: auto;
+  }
+
+  .event-edit-panel.event-form,
+  .deadline-edit-panel.event-form {
+    grid-template-columns: 1fr;
+  }
+
+  .event-edit-panel .icon-button {
+    justify-self: end;
   }
 
   .event-form,

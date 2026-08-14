@@ -1914,6 +1914,39 @@ h2 {
   padding: 12px;
 }
 
+.event-edit-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  left: 50%;
+  margin-left: 0;
+  max-width: calc(100vw - (var(--page-padding) * 2));
+  padding: 14px 52px 14px 14px;
+  position: fixed;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(760px, calc(100vw - (var(--page-padding) * 2)));
+  z-index: 35;
+}
+
+.event-edit-panel.event-form {
+  grid-template-columns:
+    minmax(180px, 1.6fr)
+    118px
+    118px
+    118px
+    70px
+    70px;
+}
+
+.event-edit-panel .icon-button {
+  height: 28px;
+  min-height: 28px;
+  position: absolute;
+  right: 14px;
+  top: 36px;
+  width: 28px;
+}
+
 .event-form label {
   display: grid;
   gap: 4px;

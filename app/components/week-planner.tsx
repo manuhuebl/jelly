@@ -1406,8 +1406,8 @@ function buildEventForm(event: TimelineEvent): NewEventForm {
 }
 
 function buildEventDateRange(form: NewEventForm) {
-  const startDate = form.startDate || formatDateInput(new Date());
-  const endDate = form.endDate || startDate;
+  const startDate = normalizeDateInput(form.startDate) || formatDateInput(new Date());
+  const endDate = normalizeDateInput(form.endDate) || startDate;
   const start = asDate(buildStartDateTime(startDate, "00:00"));
   const end =
     asDate(buildStartDateTime(endDate, "23:59")) < start
@@ -3077,7 +3077,7 @@ export function WeekPlanner() {
         project: entry.deadlineProject ?? entry.title.replace(/^deadline\s+/i, ""),
         source: "timeline"
       });
-      setEditDeadlineDate(formatDateInput(entry.start));
+      setEditDeadlineDate(formatDateFieldValue(formatDateInput(entry.start)));
       return;
     }
 
@@ -3295,8 +3295,9 @@ export function WeekPlanner() {
     }
 
     const selectedProjectKey = getProjectKey(selectedDeadline.project);
-    const nextDeadline = editDeadlineDate
-      ? buildStartDateTime(editDeadlineDate, "18:00")
+    const normalizedDeadline = normalizeDateInput(editDeadlineDate);
+    const nextDeadline = normalizedDeadline
+      ? buildStartDateTime(normalizedDeadline, "18:00")
       : undefined;
 
     setRuns((current) =>
@@ -3327,7 +3328,7 @@ export function WeekPlanner() {
           return {
             ...event,
             deadlineProject: project,
-            endDateTime: buildStartDateTime(editDeadlineDate, "22:00"),
+            endDateTime: buildStartDateTime(normalizedDeadline, "22:00"),
             startDateTime: nextDeadline,
             title: `deadline ${project}`
           };
@@ -5113,7 +5114,7 @@ export function WeekPlanner() {
         <section className="event-timeline" aria-label="Marketing and deadline timeline">
           {selectedDeadline ? (
             <form
-              className="event-form event-edit-inline deadline-edit-inline"
+              className="event-form event-edit-panel deadline-edit-panel"
               aria-label="Edit deadline"
               onSubmit={saveDeadlineEdit}
             >
@@ -5123,24 +5124,13 @@ export function WeekPlanner() {
               </label>
               <label>
                 <span>deadline</span>
-                <div className="clearable-field">
-                  <input
-                    autoFocus
-                    inputMode="numeric"
-                    placeholder="yyyy-mm-dd"
-                    value={editDeadlineDate}
-                    onChange={(event) => setEditDeadlineDate(event.target.value)}
-                  />
-                  {editDeadlineDate ? (
-                    <button
-                      className="mini-edit-pill clear-field-button"
-                      onClick={() => setEditDeadlineDate("")}
-                      type="button"
-                    >
-                      clear
-                    </button>
-                  ) : null}
-                </div>
+                <input
+                  autoFocus
+                  inputMode="numeric"
+                  placeholder="dd.mm.yyyy"
+                  value={formatDateFieldValue(editDeadlineDate)}
+                  onChange={(event) => setEditDeadlineDate(event.target.value)}
+                />
               </label>
               <button disabled={!canSaveDeadlineEdit} type="submit">
                 Save
@@ -5159,7 +5149,7 @@ export function WeekPlanner() {
 
           {selectedEvent && editEvent ? (
             <form
-              className="event-form event-edit-inline"
+              className="event-form event-edit-panel"
               aria-label="Edit event"
               onSubmit={saveEventEdit}
             >
@@ -5209,8 +5199,8 @@ export function WeekPlanner() {
                 <span>start</span>
                 <input
                   inputMode="numeric"
-                  placeholder="yyyy-mm-dd"
-                  value={editEvent.startDate}
+                  placeholder="dd.mm.yyyy"
+                  value={formatDateFieldValue(editEvent.startDate)}
                   onChange={(event) => updateEditEvent("startDate", event.target.value)}
                 />
               </label>
@@ -5218,8 +5208,8 @@ export function WeekPlanner() {
                 <span>end</span>
                 <input
                   inputMode="numeric"
-                  placeholder="yyyy-mm-dd"
-                  value={editEvent.endDate}
+                  placeholder="dd.mm.yyyy"
+                  value={formatDateFieldValue(editEvent.endDate)}
                   onChange={(event) => updateEditEvent("endDate", event.target.value)}
                 />
               </label>

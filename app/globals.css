@@ -2302,17 +2302,25 @@ h2 {
 
 .kanban-run-edit {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   grid-template-columns: 30px minmax(0, 1fr);
   grid-column: 1 / -1;
+  justify-items: stretch;
 }
 
-.kanban-run-edit .project-color-input {
+.kanban-run-edit .project-color-field {
   grid-column: 1;
   grid-row: 1;
   height: 30px;
   min-height: 30px;
   width: 30px;
+}
+
+.kanban-run-edit .project-color-input {
+  height: 100%;
+  min-height: 100%;
+  min-width: 100%;
+  width: 100%;
 }
 
 .kanban-run-edit select,
@@ -2346,7 +2354,8 @@ h2 {
   align-items: center;
   display: flex;
   gap: 6px;
-  grid-column: 1 / -1;
+  grid-column: 2;
+  justify-content: flex-end;
 }
 
 .kanban-edit-actions .project-remove-button {

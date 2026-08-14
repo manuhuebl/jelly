@@ -2791,8 +2791,9 @@ export function WeekPlanner() {
 
     const editedRun = runs.find((run) => run.id === editingKanbanRunId);
     const previousProjectKey = getProjectKey(editedRun?.project ?? "");
-    const nextDeadline = kanbanRunEdit.customerDeadline
-      ? buildStartDateTime(kanbanRunEdit.customerDeadline, "18:00")
+    const normalizedDeadline = normalizeDateInput(kanbanRunEdit.customerDeadline);
+    const nextDeadline = normalizedDeadline
+      ? buildStartDateTime(normalizedDeadline, "18:00")
       : undefined;
 
     setRuns((current) =>
@@ -2833,7 +2834,7 @@ export function WeekPlanner() {
         return {
           ...eventEntry,
           deadlineProject: nextProject,
-          endDateTime: buildStartDateTime(kanbanRunEdit.customerDeadline, "22:00"),
+          endDateTime: buildStartDateTime(normalizedDeadline, "22:00"),
           startDateTime: nextDeadline,
           title: `deadline ${nextProject}`
         };
@@ -5623,20 +5624,29 @@ export function WeekPlanner() {
                                   className="kanban-run-edit"
                                   onSubmit={saveKanbanRunEdit}
                                 >
-                                  <input
-                                    aria-label="Project color"
-                                    className={`project-color-input kanban-color-input ${
+                                  <div
+                                    className={`project-color-field kanban-color-field ${
                                       kanbanRunEdit.color ? "" : "is-empty"
                                     }`}
-                                    type="color"
-                                    value={kanbanRunEdit.color || "#ffffff"}
-                                    onChange={(event) =>
-                                      setKanbanRunEdit((current) => ({
-                                        ...current,
-                                        color: event.target.value
-                                      }))
+                                    style={
+                                      {
+                                        "--selected-color": kanbanRunEdit.color || "#ffffff"
+                                      } as CSSProperties & { "--selected-color": string }
                                     }
-                                  />
+                                  >
+                                    <input
+                                      aria-label="Project color"
+                                      className="project-color-input kanban-color-input"
+                                      type="color"
+                                      value={kanbanRunEdit.color || "#ffffff"}
+                                      onChange={(event) =>
+                                        setKanbanRunEdit((current) => ({
+                                          ...current,
+                                          color: event.target.value
+                                        }))
+                                      }
+                                    />
+                                  </div>
                                   <select
                                     aria-label="Product"
                                     className="kanban-product-field"
@@ -5665,34 +5675,19 @@ export function WeekPlanner() {
                                       }))
                                     }
                                   />
-                                  <div className="clearable-field kanban-deadline-field">
-                                    <input
-                                      aria-label="Deadline"
-                                      inputMode="numeric"
-                                      placeholder="yyyy-mm-dd"
-                                      value={kanbanRunEdit.customerDeadline}
-                                      onChange={(event) =>
-                                        setKanbanRunEdit((current) => ({
-                                          ...current,
-                                          customerDeadline: event.target.value
-                                        }))
-                                      }
-                                    />
-                                    {kanbanRunEdit.customerDeadline ? (
-                                      <button
-                                        className="mini-edit-pill clear-field-button"
-                                        onClick={() =>
-                                          setKanbanRunEdit((current) => ({
-                                            ...current,
-                                            customerDeadline: ""
-                                          }))
-                                        }
-                                        type="button"
-                                      >
-                                        clear
-                                      </button>
-                                    ) : null}
-                                  </div>
+                                  <input
+                                    aria-label="Deadline"
+                                    className="kanban-deadline-field"
+                                    inputMode="numeric"
+                                    placeholder="dd.mm.yyyy"
+                                    value={formatDateFieldValue(kanbanRunEdit.customerDeadline)}
+                                    onChange={(event) =>
+                                      setKanbanRunEdit((current) => ({
+                                        ...current,
+                                        customerDeadline: event.target.value
+                                      }))
+                                    }
+                                  />
                                   <div className="project-detail-actions kanban-edit-actions">
                                     <button
                                       className="mini-edit-pill project-remove-button"

@@ -506,7 +506,7 @@ h2 {
   min-height: 0;
   position: absolute;
   right: 16px;
-  top: 16px;
+  top: 56px;
   z-index: 2;
 }
 
@@ -661,27 +661,33 @@ h2 {
 }
 
 .project-color-field {
+  background: var(--selected-color);
+  border: 1px solid var(--line);
   display: grid;
   justify-items: start;
   min-width: 0;
+  overflow: hidden;
+  position: relative;
+  width: 38px;
 }
 
 .project-color-input {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
-  border: 1px solid var(--line);
+  border: 0;
   cursor: pointer;
   display: block;
   height: 38px;
   min-height: 38px;
   min-width: 38px;
+  opacity: 0;
   overflow: hidden;
   padding: 0;
   width: 38px;
 }
 
-.project-color-input.is-empty {
+.project-color-field.is-empty {
   background: var(--surface);
 }
 

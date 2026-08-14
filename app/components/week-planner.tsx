@@ -4436,12 +4436,17 @@ export function WeekPlanner() {
 
             <label>
               <span>color</span>
-              <div className="project-color-field">
+              <div
+                className={`project-color-field ${newPrint.projectColor ? "" : "is-empty"}`}
+                style={
+                  {
+                    "--selected-color": newPrint.projectColor || "#ffffff"
+                  } as CSSProperties & { "--selected-color": string }
+                }
+              >
                 <input
                   aria-label="Project color"
-                  className={`project-color-input ${
-                    newPrint.projectColor ? "" : "is-empty"
-                  }`}
+                  className="project-color-input"
                   type="color"
                   value={newPrint.projectColor || "#ffffff"}
                   onChange={(event) => updateNewPrint("projectColor", event.target.value)}
@@ -4574,12 +4579,17 @@ export function WeekPlanner() {
 
             <label>
               <span>color</span>
-              <div className="project-color-field">
+              <div
+                className={`project-color-field ${editPrint.projectColor ? "" : "is-empty"}`}
+                style={
+                  {
+                    "--selected-color": editPrint.projectColor || "#ffffff"
+                  } as CSSProperties & { "--selected-color": string }
+                }
+              >
                 <input
                   aria-label="Project color"
-                  className={`project-color-input ${
-                    editPrint.projectColor ? "" : "is-empty"
-                  }`}
+                  className="project-color-input"
                   type="color"
                   value={editPrint.projectColor || "#ffffff"}
                   onChange={(event) => updateEditPrint("projectColor", event.target.value)}

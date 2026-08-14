@@ -613,7 +613,7 @@ h2 {
   align-self: start;
   grid-column: 10;
   grid-row: 1;
-  margin-top: 15px;
+  margin-top: 13px;
 }
 
 .print-form.print-composer-form > button[type="submit"]:disabled {
@@ -1970,32 +1970,32 @@ h2 {
 .event-edit-panel {
   background: var(--surface);
   border: 1px solid var(--line);
-  gap: 12px;
+  gap: 16px;
   left: 50%;
   margin-left: 0;
   max-width: calc(100vw - (var(--page-padding) * 2));
-  padding: 16px;
+  padding: 18px 22px;
   position: fixed;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(840px, calc(100vw - (var(--page-padding) * 2)));
+  width: min(920px, calc(100vw - (var(--page-padding) * 2)));
   z-index: 35;
 }
 
 .event-edit-panel.event-form {
   grid-template-columns:
-    minmax(180px, 1.6fr)
-    120px
-    120px
-    120px
-    90px
-    90px
-    38px;
+    minmax(220px, 1.4fr)
+    150px
+    150px
+    150px
+    110px
+    110px
+    44px;
 }
 
 .deadline-edit-panel.event-form {
-  grid-template-columns: minmax(190px, 1fr) 170px 90px 38px;
-  width: min(600px, calc(100vw - (var(--page-padding) * 2)));
+  grid-template-columns: minmax(220px, 1fr) 180px 110px 44px;
+  width: min(640px, calc(100vw - (var(--page-padding) * 2)));
 }
 
 .event-edit-panel .icon-button {

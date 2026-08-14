@@ -506,7 +506,7 @@ h2 {
   min-height: 0;
   position: absolute;
   right: 16px;
-  top: 56px;
+  top: 35px;
   z-index: 2;
 }
 
@@ -555,7 +555,7 @@ h2 {
 
 .print-composer-form > button[type="submit"] {
   align-self: start;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .print-composer-form > button[type="submit"]:disabled {
@@ -670,6 +670,7 @@ h2 {
   background: var(--selected-color);
   border: 1px solid var(--line);
   display: grid;
+  height: 38px;
   justify-items: start;
   min-width: 0;
   overflow: hidden;
@@ -684,13 +685,13 @@ h2 {
   border: 0;
   cursor: pointer;
   display: block;
-  height: 38px;
-  min-height: 38px;
+  height: 100%;
+  min-height: 100%;
   min-width: 38px;
   opacity: 0;
   overflow: hidden;
   padding: 0;
-  width: 38px;
+  width: 100%;
 }
 
 .project-color-field.is-empty {

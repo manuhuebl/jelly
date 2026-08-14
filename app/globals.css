@@ -549,13 +549,22 @@ h2 {
 
 .print-composer-form {
   align-items: start;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  grid-template-columns:
+    150px
+    minmax(280px, 2fr)
+    38px
+    92px
+    minmax(120px, 1fr)
+    120px
+    120px
+    120px
+    120px;
   padding-right: 54px;
 }
 
 .print-composer-form > button[type="submit"] {
   align-self: start;
-  margin-top: 16px;
+  margin-top: 15px;
 }
 
 .print-composer-form > button[type="submit"]:disabled {

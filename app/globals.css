@@ -492,6 +492,7 @@ h2 {
   left: 50%;
   max-height: calc(100vh - (var(--page-padding) * 2));
   overflow: auto;
+  padding: 14px 16px;
   position: fixed;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -502,7 +503,17 @@ h2 {
 .edit-print-panel > .panel-heading {
   align-items: center;
   justify-content: flex-end;
+  min-height: 0;
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  z-index: 2;
+}
+
+.edit-print-panel > .panel-heading > .icon-button {
+  height: 38px;
   min-height: 38px;
+  width: 38px;
 }
 
 .panel-heading,
@@ -523,8 +534,8 @@ h2 {
 
 .edit-print-form {
   grid-template-columns:
-    120px
-    minmax(200px, 1.4fr)
+    128px
+    minmax(260px, 1.8fr)
     48px
     92px
     minmax(110px, 0.8fr)
@@ -533,6 +544,7 @@ h2 {
     132px
     92px
     92px;
+  padding-right: 48px;
 }
 
 .print-composer-form {
@@ -655,13 +667,13 @@ h2 {
 }
 
 .project-color-input {
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--line);
   cursor: pointer;
   height: 38px;
   min-height: 38px;
   min-width: 38px;
-  padding: 2px;
+  padding: 0;
   width: 38px;
 }
 
@@ -675,6 +687,7 @@ h2 {
 
 .project-color-input::-webkit-color-swatch {
   border: 0;
+  min-height: 36px;
 }
 
 .printer-toggle {
@@ -3001,13 +3014,13 @@ h2 {
   }
 
   .edit-print-panel .panel-heading {
-    padding-right: 34px;
+    padding-right: 0;
+    right: 14px;
+    top: 14px;
   }
 
   .edit-print-panel > .panel-heading > .icon-button {
-    position: absolute;
-    right: 10px;
-    top: 10px;
+    position: static;
   }
 
   .print-composer .composer-heading {

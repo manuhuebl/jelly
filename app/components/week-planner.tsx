@@ -473,6 +473,58 @@ function formatDateInput(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function normalizeDateInput(value: string, fallbackYear = new Date().getFullYear()) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const match = trimmed.match(/^(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\.?$/);
+
+  if (!match) {
+    return "";
+  }
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const rawYear = match[3];
+  const year = rawYear
+    ? rawYear.length === 2
+      ? Number(`20${rawYear}`)
+      : Number(rawYear)
+    : fallbackYear;
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return "";
+  }
+
+  return formatDateInput(parsed);
+}
+
+function formatDateFieldValue(value: string) {
+  const normalized = normalizeDateInput(value);
+
+  if (!normalized) {
+    return value;
+  }
+
+  const date = asDate(buildStartDateTime(normalized, "00:00"));
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${day}.${month}.${date.getFullYear()}`;
+}
+
 function formatDateTimeValue(date: Date) {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -1279,6 +1331,8 @@ function createDefaultEventForm(weekStart: Date): NewEventForm {
 }
 
 function buildCandidateRun(form: NewPrintForm, id = "candidate"): PrintRun {
+  const customerDeadline = normalizeDateInput(form.customerDeadline);
+
   return {
     id,
     assignee: form.assignee || undefined,
@@ -1288,8 +1342,8 @@ function buildCandidateRun(form: NewPrintForm, id = "candidate"): PrintRun {
     startDateTime: buildStartDateTime(form.date, form.time),
     status: form.status,
     priority: form.status === "reprint" ? "urgent" : "normal",
-    customerDeadline: form.customerDeadline
-      ? buildStartDateTime(form.customerDeadline, "18:00")
+    customerDeadline: customerDeadline
+      ? buildStartDateTime(customerDeadline, "18:00")
       : undefined
   };
 }
@@ -4381,7 +4435,7 @@ export function WeekPlanner() {
             </label>
 
             <label>
-              <span>project color</span>
+              <span>color</span>
               <div className="project-color-field">
                 <input
                   aria-label="Project color"
@@ -4448,8 +4502,9 @@ export function WeekPlanner() {
             <label>
               <span>deadline</span>
               <input
-                type="date"
-                value={newPrint.customerDeadline}
+                inputMode="numeric"
+                placeholder="dd.mm.yyyy"
+                value={formatDateFieldValue(newPrint.customerDeadline)}
                 onChange={(event) => updateNewPrint("customerDeadline", event.target.value)}
               />
             </label>
@@ -4518,7 +4573,7 @@ export function WeekPlanner() {
             </label>
 
             <label>
-              <span>project color</span>
+              <span>color</span>
               <div className="project-color-field">
                 <input
                   aria-label="Project color"
@@ -4585,8 +4640,9 @@ export function WeekPlanner() {
             <label>
               <span>deadline</span>
               <input
-                type="date"
-                value={editPrint.customerDeadline}
+                inputMode="numeric"
+                placeholder="dd.mm.yyyy"
+                value={formatDateFieldValue(editPrint.customerDeadline)}
                 onChange={(event) => updateEditPrint("customerDeadline", event.target.value)}
               />
             </label>

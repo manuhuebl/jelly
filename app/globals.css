@@ -495,8 +495,14 @@ h2 {
   position: fixed;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(1180px, calc(100vw - (var(--page-padding) * 2)));
+  width: min(1280px, calc(100vw - (var(--page-padding) * 2)));
   z-index: 30;
+}
+
+.edit-print-panel > .panel-heading {
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 38px;
 }
 
 .panel-heading,
@@ -511,8 +517,22 @@ h2 {
 .print-form {
   align-items: end;
   display: grid;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+}
+
+.edit-print-form {
+  grid-template-columns:
+    120px
+    minmax(200px, 1.4fr)
+    48px
+    92px
+    minmax(110px, 0.8fr)
+    132px
+    112px
+    132px
+    92px
+    92px;
 }
 
 .print-composer-form {
@@ -584,6 +604,14 @@ h2 {
   padding: 7px 9px;
 }
 
+.print-form .project-field {
+  min-width: 0;
+}
+
+.print-form .wide-field {
+  grid-column: span 2;
+}
+
 .clearable-field {
   align-items: center;
   display: grid;
@@ -622,6 +650,7 @@ h2 {
 
 .project-color-field {
   display: grid;
+  justify-items: start;
   min-width: 0;
 }
 
@@ -631,8 +660,9 @@ h2 {
   cursor: pointer;
   height: 38px;
   min-height: 38px;
+  min-width: 38px;
   padding: 2px;
-  width: 100%;
+  width: 38px;
 }
 
 .project-color-input.is-empty {
@@ -2790,6 +2820,12 @@ h2 {
   width: 100%;
 }
 
+@media (max-width: 1300px) {
+  .edit-print-form {
+    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  }
+}
+
 @media (max-width: 1100px) {
   .day-label-full {
     display: none;
@@ -2835,6 +2871,10 @@ h2 {
   .event-form,
   .project-form {
     grid-template-columns: 1fr;
+  }
+
+  .print-form .wide-field {
+    grid-column: auto;
   }
 
   .event-form,

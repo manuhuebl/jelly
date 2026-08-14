@@ -4370,9 +4370,10 @@ export function WeekPlanner() {
               </select>
             </label>
 
-            <label>
+            <label className="wide-field">
               <span>project</span>
               <input
+                className="project-field"
                 placeholder="project or customer"
                 value={newPrint.project}
                 onChange={(event) => updateNewPrint("project", event.target.value)}
@@ -4446,22 +4447,11 @@ export function WeekPlanner() {
 
             <label>
               <span>deadline</span>
-              <div className="clearable-field">
-                <input
-                  type="date"
-                  value={newPrint.customerDeadline}
-                  onChange={(event) => updateNewPrint("customerDeadline", event.target.value)}
-                />
-                {newPrint.customerDeadline ? (
-                  <button
-                    className="mini-edit-pill clear-field-button"
-                    onClick={() => updateNewPrint("customerDeadline", "")}
-                    type="button"
-                  >
-                    clear
-                  </button>
-                ) : null}
-              </div>
+              <input
+                type="date"
+                value={newPrint.customerDeadline}
+                onChange={(event) => updateNewPrint("customerDeadline", event.target.value)}
+              />
             </label>
 
             <button disabled={!canAddPrint} type="submit">
@@ -4492,10 +4482,6 @@ export function WeekPlanner() {
       {selectedRun && editPrint && selectedProduct && editProduct && editStart && editEnd ? (
         <section className="add-print-panel edit-print-panel" aria-label="Edit print">
           <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Edit print</p>
-              <h2>{selectedProduct.name}</h2>
-            </div>
             <button
               aria-label="Close edit print form"
               className="icon-button"
@@ -4507,7 +4493,7 @@ export function WeekPlanner() {
             />
           </div>
 
-          <form className="print-form" onSubmit={saveEdit}>
+          <form className="print-form edit-print-form" onSubmit={saveEdit}>
             <label>
               <span>product</span>
               <select
@@ -4525,6 +4511,7 @@ export function WeekPlanner() {
             <label>
               <span>project</span>
               <input
+                className="project-field"
                 value={editPrint.project}
                 onChange={(event) => updateEditPrint("project", event.target.value)}
               />
@@ -4580,8 +4567,7 @@ export function WeekPlanner() {
             <label>
               <span>start date</span>
               <input
-                inputMode="numeric"
-                placeholder="yyyy-mm-dd"
+                type="date"
                 value={editPrint.date}
                 onChange={(event) => updateEditPrint("date", event.target.value)}
               />
@@ -4598,23 +4584,11 @@ export function WeekPlanner() {
 
             <label>
               <span>deadline</span>
-              <div className="clearable-field">
-                <input
-                  inputMode="numeric"
-                  placeholder="yyyy-mm-dd"
-                  value={editPrint.customerDeadline}
-                  onChange={(event) => updateEditPrint("customerDeadline", event.target.value)}
-                />
-                {editPrint.customerDeadline ? (
-                  <button
-                    className="mini-edit-pill clear-field-button"
-                    onClick={() => updateEditPrint("customerDeadline", "")}
-                    type="button"
-                  >
-                    clear
-                  </button>
-                ) : null}
-              </div>
+              <input
+                type="date"
+                value={editPrint.customerDeadline}
+                onChange={(event) => updateEditPrint("customerDeadline", event.target.value)}
+              />
             </label>
 
             <button disabled={!canSaveEdit} type="submit">

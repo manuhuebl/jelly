@@ -506,14 +506,14 @@ h2 {
   min-height: 0;
   position: absolute;
   right: 16px;
-  top: 14px;
+  top: 16px;
   z-index: 2;
 }
 
 .edit-print-panel > .panel-heading > .icon-button {
-  height: 38px;
-  min-height: 38px;
-  width: 38px;
+  height: 28px;
+  min-height: 28px;
+  width: 28px;
 }
 
 .panel-heading,
@@ -534,17 +534,17 @@ h2 {
 
 .edit-print-form {
   grid-template-columns:
-    128px
-    minmax(260px, 1.8fr)
-    48px
-    92px
-    minmax(110px, 0.8fr)
-    132px
-    112px
-    132px
-    92px
-    92px;
-  padding-right: 48px;
+    minmax(104px, 1fr)
+    minmax(220px, 2fr)
+    38px
+    80px
+    minmax(96px, 1fr)
+    110px
+    88px
+    110px
+    78px
+    78px;
+  padding-right: 36px;
 }
 
 .print-composer-form {
@@ -667,12 +667,16 @@ h2 {
 }
 
 .project-color-input {
+  -webkit-appearance: none;
+  appearance: none;
   background: transparent;
   border: 1px solid var(--line);
   cursor: pointer;
+  display: block;
   height: 38px;
   min-height: 38px;
   min-width: 38px;
+  overflow: hidden;
   padding: 0;
   width: 38px;
 }
@@ -682,12 +686,21 @@ h2 {
 }
 
 .project-color-input::-webkit-color-swatch-wrapper {
+  height: 100%;
   padding: 0;
+  width: 100%;
 }
 
 .project-color-input::-webkit-color-swatch {
   border: 0;
-  min-height: 36px;
+  height: 100%;
+  width: 100%;
+}
+
+.project-color-input::-moz-color-swatch {
+  border: 0;
+  height: 100%;
+  width: 100%;
 }
 
 .printer-toggle {
@@ -2831,12 +2844,6 @@ h2 {
   min-height: 28px;
   padding: 4px 6px;
   width: 100%;
-}
-
-@media (max-width: 1300px) {
-  .edit-print-form {
-    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
-  }
 }
 
 @media (max-width: 1100px) {

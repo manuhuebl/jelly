@@ -555,7 +555,13 @@ h2 {
 
 .print-composer-form > button[type="submit"] {
   align-self: start;
-  margin-top: 0;
+  margin-top: 14px;
+}
+
+.print-composer-form > button[type="submit"]:disabled {
+  background: #9b9b94;
+  border-color: transparent;
+  color: var(--surface);
 }
 
 .composer-heading {

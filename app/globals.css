@@ -1821,7 +1821,7 @@ h2 {
   padding-top: 20px;
 }
 
-.print-card.has-starter.is-short.continues-after:not(.status-printing):not(.status-finished):not(
+.print-card.has-starter.is-short:not(.status-printing):not(.status-finished):not(
     .status-failed
   ):not(.is-continuation):not(.is-expanded)
   .card-body {

@@ -4944,6 +4944,9 @@ export function WeekPlanner() {
                           ? []
                           : cardActions.filter((action) => action !== "edit");
                         const hasReadableSegment = segment.durationHours >= 2.75;
+                        const isContinuation = segment.startsBeforeSegment;
+                        const showContinuationOnly =
+                          isContinuation && segment.run.status !== "failed";
                         const isShort = segment.durationHours <= 5 && !segment.startsBeforeSegment;
                         const isExpanded = expandedRunIds.has(segment.run.id);
                         const showCompactProject =
@@ -4972,7 +4975,9 @@ export function WeekPlanner() {
                           <article
                             className={`print-card status-${segment.run.status} ${
                               segment.run.priority === "urgent" ? "is-urgent" : ""
-                            } ${segment.startsBeforeSegment ? "is-continuation" : ""} ${
+                            } ${isContinuation ? "is-continuation" : ""} ${
+                              showContinuationOnly ? "is-continuation-only" : ""
+                            } ${
                               segment.continuesAfterSegment ? "continues-after" : ""
                             } ${isShort ? "is-short" : ""} ${
                               isExpanded ? "is-expanded" : ""
@@ -5005,100 +5010,114 @@ export function WeekPlanner() {
                             onPointerUp={(event) => handlePrintPointerUp(event, segment.run)}
                             style={cardStyle}
                             tabIndex={0}
-                            title={buildRunTitle(segment)}
+                            title={showContinuationOnly ? "continued" : buildRunTitle(segment)}
                           >
                             {hasReadableSegment ? (
                               <>
-                                <div className="card-topline">
-                                  <div className="card-status-pills">
-                                    {showStatusPill && !statusInActions ? (
-                                      <span>{segmentLabel}</span>
-                                    ) : null}
-                                    {starter ? (
-                                      <span className="assignee-pill">{starter.initial}</span>
-                                    ) : null}
+                                {showContinuationOnly ? (
+                                  <div className="card-topline">
+                                    <div className="card-status-pills">
+                                      <span>continued</span>
+                                    </div>
                                   </div>
-                                  <div className="card-topline-actions">
-                                    {progress !== null ? <strong>{progress}%</strong> : null}
-                                    {statusInActions ? <span>{segmentLabel}</span> : null}
-                                    {hasEditAction ? (
-                                      <button
-                                        className="card-pill-button"
-                                        onClick={(event) =>
-                                          handleRunAction(event, segment.run, "edit")
-                                        }
-                                        onPointerDown={(event) => event.stopPropagation()}
-                                        type="button"
+                                ) : (
+                                  <>
+                                    <div className="card-topline">
+                                      <div className="card-status-pills">
+                                        {showStatusPill && !statusInActions ? (
+                                          <span>{segmentLabel}</span>
+                                        ) : null}
+                                        {starter ? (
+                                          <span className="assignee-pill">
+                                            {starter.initial}
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                      <div className="card-topline-actions">
+                                        {progress !== null ? <strong>{progress}%</strong> : null}
+                                        {statusInActions ? <span>{segmentLabel}</span> : null}
+                                        {hasEditAction ? (
+                                          <button
+                                            className="card-pill-button"
+                                            onClick={(event) =>
+                                              handleRunAction(event, segment.run, "edit")
+                                            }
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            type="button"
+                                          >
+                                            edit
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    </div>
+
+                                    {progress !== null ? (
+                                      <div
+                                        className="progress-track"
+                                        aria-label={`${progress}% printed`}
                                       >
-                                        edit
-                                      </button>
+                                        <span style={{ width: `${progress}%` }} />
+                                      </div>
                                     ) : null}
-                                  </div>
-                                </div>
 
-                                {progress !== null ? (
-                                  <div
-                                    className="progress-track"
-                                    aria-label={`${progress}% printed`}
-                                  >
-                                    <span style={{ width: `${progress}%` }} />
-                                  </div>
-                                ) : null}
+                                    <div className="card-body">
+                                      <div className="card-product-line">
+                                        <strong>{segment.product.name}</strong>
+                                        {isShort ? (
+                                          <button
+                                            aria-expanded={isExpanded}
+                                            aria-label={
+                                              isExpanded
+                                                ? "Hide print details"
+                                                : "Show print details"
+                                            }
+                                            className={`show-more-button ${
+                                              isExpanded ? "is-open" : ""
+                                            }`}
+                                            onClick={(event) =>
+                                              toggleCardDetails(event, segment.run.id)
+                                            }
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            type="button"
+                                          >
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                      <span>{getProjectLabel(segment.run, projectRunTotals)}</span>
+                                      {showCompactProject ? (
+                                        <span className="compact-project-label">
+                                          {getCompactProjectLabel(segment.run, projectRunTotals)}
+                                        </span>
+                                      ) : null}
+                                    </div>
 
-                                <div className="card-body">
-                                  <div className="card-product-line">
-                                    <strong>{segment.product.name}</strong>
-                                    {isShort ? (
-                                      <button
-                                        aria-expanded={isExpanded}
-                                        aria-label={
-                                          isExpanded ? "Hide print details" : "Show print details"
-                                        }
-                                        className={`show-more-button ${
-                                          isExpanded ? "is-open" : ""
-                                        }`}
-                                        onClick={(event) =>
-                                          toggleCardDetails(event, segment.run.id)
-                                        }
-                                        onPointerDown={(event) => event.stopPropagation()}
-                                        type="button"
-                                      >
-                                      </button>
+                                    {progress === null ? (
+                                      <div className="card-times">
+                                        <span>{getTimeRangeLabel(segment)}</span>
+                                        {cardDeadline ? (
+                                          <span>deadline {formatCompactDate(cardDeadline)}</span>
+                                        ) : null}
+                                      </div>
                                     ) : null}
-                                  </div>
-                                  <span>{getProjectLabel(segment.run, projectRunTotals)}</span>
-                                  {showCompactProject ? (
-                                    <span className="compact-project-label">
-                                      {getCompactProjectLabel(segment.run, projectRunTotals)}
-                                    </span>
-                                  ) : null}
-                                </div>
 
-                                {progress === null ? (
-                                  <div className="card-times">
-                                    <span>{getTimeRangeLabel(segment)}</span>
-                                    {cardDeadline ? (
-                                      <span>deadline {formatCompactDate(cardDeadline)}</span>
+                                    {lowerCardActions.length > 0 ? (
+                                      <div className="card-actions">
+                                        {lowerCardActions.map((action) => (
+                                          <button
+                                            key={action}
+                                            onClick={(event) =>
+                                              handleRunAction(event, segment.run, action)
+                                            }
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            type="button"
+                                          >
+                                            {action}
+                                          </button>
+                                        ))}
+                                      </div>
                                     ) : null}
-                                  </div>
-                                ) : null}
-
-                                {lowerCardActions.length > 0 ? (
-                                  <div className="card-actions">
-                                    {lowerCardActions.map((action) => (
-                                      <button
-                                        key={action}
-                                        onClick={(event) =>
-                                          handleRunAction(event, segment.run, action)
-                                        }
-                                        onPointerDown={(event) => event.stopPropagation()}
-                                        type="button"
-                                      >
-                                        {action}
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : null}
+                                  </>
+                                )}
                               </>
                             ) : null}
                           </article>

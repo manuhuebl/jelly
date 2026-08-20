@@ -1821,6 +1821,14 @@ h2 {
   padding-top: 20px;
 }
 
+.print-card.has-starter.is-short.continues-after:not(.status-printing):not(.status-finished):not(
+    .status-failed
+  ):not(.is-continuation):not(.is-expanded)
+  .card-body {
+  margin-top: 0;
+  padding-top: 20px;
+}
+
 .print-card.is-short:not(.is-expanded) .card-product-line {
   display: block;
   width: 100%;

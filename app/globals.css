@@ -1785,14 +1785,21 @@ h2 {
 
 .print-card.is-short:not(.is-expanded) .card-topline {
   display: flex;
-  left: auto;
+  left: 5px;
   min-height: 18px;
   right: 5px;
   top: 5px;
 }
 
-.print-card.is-short:not(.is-expanded) .card-status-pills,
 .print-card.is-short:not(.is-expanded) .card-topline-actions > :not(.card-pill-button) {
+  display: none;
+}
+
+.print-card.is-short:not(.is-expanded) .card-status-pills {
+  display: flex;
+}
+
+.print-card.is-short:not(.is-expanded) .card-status-pills > :not(.assignee-pill) {
   display: none;
 }
 
@@ -1805,7 +1812,7 @@ h2 {
   display: grid;
   gap: 4px;
   justify-content: flex-start;
-  padding: 0 36px 0 0;
+  padding: 20px 36px 0 0;
   text-align: left;
 }
 

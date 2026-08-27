@@ -1527,7 +1527,7 @@ function getRunActionLabels(entry: ScheduledRun, now: Date) {
   }
 
   if (entry.end <= now) {
-    return [];
+    return ["print okay?", "print not okay?"];
   }
 
   if ((entry.run.status === "planned" || entry.run.status === "reprint") && entry.start <= now) {
@@ -3507,7 +3507,7 @@ export function WeekPlanner() {
     }
 
     if (isPast) {
-      return run.status === "failed" ? ["edit", "reschedule"] : ["edit"];
+      return run.status === "failed" ? ["edit", "reschedule"] : ["edit", ...actions];
     }
 
     if (

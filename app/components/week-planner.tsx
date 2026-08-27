@@ -1042,6 +1042,10 @@ function getProductInventory(
   });
 }
 
+function isProjectCountedRun(run: PrintRun) {
+  return run.status !== "failed";
+}
+
 function getProjectOverviewRows(
   runs: PrintRun[],
   events: TimelineEvent[],
@@ -1050,6 +1054,10 @@ function getProjectOverviewRows(
   const projects = new Map<string, ProjectOverviewRow>();
 
   getScheduledRuns(runs, productMap).forEach((entry) => {
+    if (!isProjectCountedRun(entry.run)) {
+      return;
+    }
+
     const project = entry.run.project.trim();
     const projectKey = project.toLowerCase();
 
@@ -1199,7 +1207,9 @@ function getKanbanRunRows(
   const deadlinesByProject = new Map(
     projects.map((project) => [project.id, project.deadline])
   );
-  const scheduledRuns = getScheduledRuns(runs, productMap);
+  const scheduledRuns = getScheduledRuns(runs, productMap).filter((entry) =>
+    isProjectCountedRun(entry.run)
+  );
   const totalsByProject = scheduledRuns.reduce<Record<string, number>>((totals, entry) => {
     const projectKey = getProjectKey(entry.run.project);
 
@@ -1976,6 +1986,10 @@ export function WeekPlanner() {
   const projectRunTotals = useMemo(
     () =>
       runs.reduce<Record<string, number>>((totals, run) => {
+        if (!isProjectCountedRun(run)) {
+          return totals;
+        }
+
         const projectKey = getProjectKey(run.project);
 
         if (!projectKey) {
@@ -3443,6 +3457,14 @@ export function WeekPlanner() {
   function updateRunStatus(run: PrintRun, status: JobStatus, startDateTime?: string) {
     const product = productById.get(run.productId);
     const isRunAlreadyShipped = shippedInventoryRunIds.has(run.id);
+    const wasAlreadyCompleted = run.status === "finished" || run.status === "failed";
+    const isCompletionStatus = status === "finished" || status === "failed";
+
+    if (isCompletionStatus && !wasAlreadyCompleted && product) {
+      setMaterialStockKg((currentStock) =>
+        Math.max(currentStock - product.pelletUsageKg, 0)
+      );
+    }
 
     if (status === "finished" && run.status !== "finished" && product) {
       if (!isRunAlreadyShipped) {

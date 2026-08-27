@@ -4948,7 +4948,16 @@ export function WeekPlanner() {
                         const showContinuationOnly =
                           isContinuation && segment.run.status !== "failed";
                         const isShort = segment.durationHours <= 5 && !segment.startsBeforeSegment;
-                        const isExpanded = expandedRunIds.has(segment.run.id);
+                        const continuationExpandId = `${segment.run.id}:continued:${segment.dayIndex}`;
+                        const canExpandContinuation =
+                          showContinuationOnly &&
+                          !segment.continuesAfterSegment &&
+                          lowerCardActions.length > 0;
+                        const isContinuationExpanded =
+                          canExpandContinuation && expandedRunIds.has(continuationExpandId);
+                        const isExpanded =
+                          !showContinuationOnly && expandedRunIds.has(segment.run.id);
+                        const isCardExpanded = isExpanded || isContinuationExpanded;
                         const showCompactProject =
                           isShort && !isExpanded && canShowCompactProject(segment);
                         const segmentLabel = getSegmentLabel(segment, now);
@@ -4980,7 +4989,7 @@ export function WeekPlanner() {
                             } ${
                               segment.continuesAfterSegment ? "continues-after" : ""
                             } ${isShort ? "is-short" : ""} ${
-                              isExpanded ? "is-expanded" : ""
+                              isCardExpanded ? "is-expanded" : ""
                             } ${isPast ? "is-past" : ""} ${
                               segment.run.status === "failed" ? "is-failed" : ""
                             } ${
@@ -5012,14 +5021,50 @@ export function WeekPlanner() {
                             tabIndex={0}
                             title={showContinuationOnly ? "continued" : buildRunTitle(segment)}
                           >
-                            {hasReadableSegment ? (
+                            {hasReadableSegment || canExpandContinuation ? (
                               <>
                                 {showContinuationOnly ? (
-                                  <div className="card-topline">
-                                    <div className="card-status-pills">
-                                      <span>continued</span>
+                                  <>
+                                    <div className="card-topline">
+                                      <div className="card-status-pills">
+                                        <span>continued</span>
+                                      </div>
                                     </div>
-                                  </div>
+                                    {canExpandContinuation ? (
+                                      <button
+                                        aria-expanded={isContinuationExpanded}
+                                        aria-label={
+                                          isContinuationExpanded
+                                            ? "Hide print review"
+                                            : "Show print review"
+                                        }
+                                        className={`show-more-button continuation-review-toggle ${
+                                          isContinuationExpanded ? "is-open" : ""
+                                        }`}
+                                        onClick={(event) =>
+                                          toggleCardDetails(event, continuationExpandId)
+                                        }
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        type="button"
+                                      />
+                                    ) : null}
+                                    {isContinuationExpanded ? (
+                                      <div className="card-actions continuation-review-actions">
+                                        {lowerCardActions.map((action) => (
+                                          <button
+                                            key={action}
+                                            onClick={(event) =>
+                                              handleRunAction(event, segment.run, action)
+                                            }
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            type="button"
+                                          >
+                                            {action}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    ) : null}
+                                  </>
                                 ) : (
                                   <>
                                     <div className="card-topline">

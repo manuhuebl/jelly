@@ -1576,6 +1576,10 @@ h2 {
   height: calc(var(--duration-hours) * var(--hour-height));
 }
 
+.print-card.is-continuation-only {
+  overflow: hidden;
+}
+
 .card-topline {
   align-items: center;
   display: flex;
@@ -1879,6 +1883,33 @@ h2 {
   position: absolute;
   right: 5px;
   top: auto;
+}
+
+.print-card.is-continuation-only.is-expanded {
+  height: calc(var(--duration-hours) * var(--hour-height));
+  min-height: 78px;
+  overflow: visible;
+  z-index: 14;
+}
+
+.print-card.is-continuation-only .continuation-review-toggle {
+  bottom: 5px;
+  left: auto;
+  position: absolute;
+  right: 5px;
+  top: auto;
+}
+
+.print-card.is-continuation-only .continuation-review-actions {
+  align-items: flex-start;
+  bottom: auto;
+  left: 8px;
+  margin-top: 0;
+  min-height: 0;
+  position: absolute;
+  right: 8px;
+  top: 32px;
+  z-index: 2;
 }
 
 .show-more-button {

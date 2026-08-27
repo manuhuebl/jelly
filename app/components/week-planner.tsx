@@ -159,8 +159,9 @@ type PendingUndoMove = {
 };
 
 type PendingUndoKanbanMove = {
-  previousStage?: ProjectStage;
-  runId: string;
+  previousShippedRunIds: string[];
+  previousStages: Record<string, ProjectStage | undefined>;
+  runIds: string[];
 };
 
 type ViewMode = "week" | "month";
@@ -181,6 +182,10 @@ type NativeDragPayload =
   | {
       kind: "kanban-run";
       runId: string;
+    }
+  | {
+      kind: "kanban-group";
+      runIds: string[];
     };
 
 type PendingWeekendAction =
@@ -3711,19 +3716,62 @@ export function WeekPlanner() {
       return;
     }
 
-    const { previousStage, runId } = pendingUndoKanbanMove;
+    const { previousShippedRunIds, previousStages, runIds } = pendingUndoKanbanMove;
     const nextManualStages = {
       ...manualRunStages
     };
+    const previousShippedSet = new Set(previousShippedRunIds);
+    const nextShippedRunIds = new Set(shippedInventoryRunIds);
+    const addBackToInventory = new Map<Product["id"], number>();
+    const subtractFromInventory = new Map<Product["id"], number>();
 
-    if (previousStage) {
-      nextManualStages[runId] = previousStage;
-    } else {
-      delete nextManualStages[runId];
-    }
+    runIds.forEach((runId) => {
+      const previousStage = previousStages[runId];
+      const run = runs.find((entry) => entry.id === runId);
+      const product = run ? productById.get(run.productId) : null;
+      const isCurrentlyShipped = shippedInventoryRunIds.has(runId);
+      const wasPreviouslyShipped = previousShippedSet.has(runId);
+
+      if (previousStage) {
+        nextManualStages[runId] = previousStage;
+      } else {
+        delete nextManualStages[runId];
+      }
+
+      if (wasPreviouslyShipped) {
+        nextShippedRunIds.add(runId);
+      } else {
+        nextShippedRunIds.delete(runId);
+      }
+
+      if (!product || run?.status !== "finished") {
+        return;
+      }
+
+      if (isCurrentlyShipped && !wasPreviouslyShipped) {
+        addBackToInventory.set(
+          product.id,
+          (addBackToInventory.get(product.id) ?? 0) + 1
+        );
+      }
+
+      if (!isCurrentlyShipped && wasPreviouslyShipped) {
+        subtractFromInventory.set(
+          product.id,
+          (subtractFromInventory.get(product.id) ?? 0) + 1
+        );
+      }
+    });
+
+    adjustManualProductStock(addBackToInventory, "add");
+    adjustManualProductStock(subtractFromInventory, "subtract");
 
     setManualRunStages(nextManualStages);
-    savePlannerSnapshot(runs, { manualRunStages: nextManualStages });
+    setShippedInventoryRunIds(nextShippedRunIds);
+    savePlannerSnapshot(runs, {
+      manualRunStages: nextManualStages,
+      shippedInventoryRunIds: [...nextShippedRunIds]
+    });
     setPendingUndoKanbanMove(null);
     setNotice(null);
   }
@@ -3934,7 +3982,9 @@ export function WeekPlanner() {
   }
 
   function handleBoardDragOver(event: DragEvent<HTMLElement>) {
-    if (!nativeDragRef.current) {
+    const dragMeta = nativeDragRef.current;
+
+    if (!dragMeta || dragMeta.kind === "kanban-run" || dragMeta.kind === "kanban-group") {
       return;
     }
 
@@ -3945,7 +3995,7 @@ export function WeekPlanner() {
   function handleBoardDrop(event: DragEvent<HTMLElement>) {
     const dragMeta = nativeDragRef.current;
 
-    if (!dragMeta || dragMeta.kind === "kanban-run") {
+    if (!dragMeta || dragMeta.kind === "kanban-run" || dragMeta.kind === "kanban-group") {
       return;
     }
 
@@ -4050,9 +4100,25 @@ export function WeekPlanner() {
     event.dataTransfer.setData("text/plain", `kanban-run:${runId}`);
   }
 
+  function handleKanbanGroupDragStart(event: DragEvent<HTMLElement>, runIds: string[]) {
+    event.stopPropagation();
+
+    if (runIds.length === 0) {
+      return;
+    }
+
+    nativeDragRef.current = {
+      kind: "kanban-group",
+      runIds
+    };
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", `kanban-group:${runIds.join(",")}`);
+  }
+
   function handleProjectStageDragOver(event: DragEvent<HTMLElement>) {
     const hasKanbanPayload =
       nativeDragRef.current?.kind === "kanban-run" ||
+      nativeDragRef.current?.kind === "kanban-group" ||
       event.dataTransfer.types.includes("text/plain");
 
     if (!hasKanbanPayload) {
@@ -4066,12 +4132,23 @@ export function WeekPlanner() {
   function handleProjectStageDrop(event: DragEvent<HTMLElement>, stage: ProjectStage) {
     const dragMeta = nativeDragRef.current;
     const transferValue = event.dataTransfer.getData("text/plain");
-    const transferRunId = transferValue.startsWith("kanban-run:")
-      ? transferValue.replace("kanban-run:", "")
-      : "";
-    const runId = dragMeta?.kind === "kanban-run" ? dragMeta.runId : transferRunId;
+    const transferRunIds = transferValue.startsWith("kanban-run:")
+      ? [transferValue.replace("kanban-run:", "")]
+      : transferValue.startsWith("kanban-group:")
+        ? transferValue
+            .replace("kanban-group:", "")
+            .split(",")
+            .filter(Boolean)
+        : [];
+    const runIds =
+      dragMeta?.kind === "kanban-run"
+        ? [dragMeta.runId]
+        : dragMeta?.kind === "kanban-group"
+          ? dragMeta.runIds
+          : transferRunIds;
+    const uniqueRunIds = [...new Set(runIds)];
 
-    if (!runId) {
+    if (uniqueRunIds.length === 0) {
       return;
     }
 
@@ -4080,57 +4157,92 @@ export function WeekPlanner() {
     nativeDragRef.current = null;
     setDragState(null);
 
-    const runEntry = kanbanRows.find((entry) => entry.run.id === runId);
+    const runEntries = uniqueRunIds
+      .map((runId) => kanbanRows.find((entry) => entry.run.id === runId))
+      .filter((entry): entry is KanbanRunRow => Boolean(entry));
 
-    if (!runEntry) {
+    if (runEntries.length === 0) {
       return;
     }
 
-    const currentStage = getRunStage(runEntry, manualRunStages, now);
-    const previousStage = manualRunStages[runId];
+    const moveEntries = runEntries.filter(
+      (entry) => getRunStage(entry, manualRunStages, now) !== stage
+    );
 
-    if (currentStage === stage) {
+    if (moveEntries.length === 0) {
       return;
     }
 
-    const productCounts = new Map<Product["id"], number>([[runEntry.product.id, 1]]);
-    const wasShipped = shippedInventoryRunIds.has(runId);
     const willBeShipped = stage === "shipped";
+    const previousStages = moveEntries.reduce<Record<string, ProjectStage | undefined>>(
+      (stages, entry) => ({
+        ...stages,
+        [entry.run.id]: manualRunStages[entry.run.id]
+      }),
+      {}
+    );
     let nextShippedRunIds = new Set(shippedInventoryRunIds);
+    const subtractFromInventory = new Map<Product["id"], number>();
+    const addBackToInventory = new Map<Product["id"], number>();
 
-    if (willBeShipped && !wasShipped && runEntry.run.status === "finished") {
-      adjustManualProductStock(productCounts, "subtract");
-      nextShippedRunIds = new Set(nextShippedRunIds);
-      nextShippedRunIds.add(runId);
-      setShippedInventoryRunIds(nextShippedRunIds);
-    }
+    moveEntries.forEach((runEntry) => {
+      const wasShipped = shippedInventoryRunIds.has(runEntry.run.id);
 
-    if (!willBeShipped && wasShipped) {
-      adjustManualProductStock(productCounts, "add");
-      nextShippedRunIds = new Set(nextShippedRunIds);
-      nextShippedRunIds.delete(runId);
-      setShippedInventoryRunIds(nextShippedRunIds);
-    }
+      if (willBeShipped) {
+        nextShippedRunIds.add(runEntry.run.id);
+
+        if (!wasShipped && runEntry.run.status === "finished") {
+          subtractFromInventory.set(
+            runEntry.product.id,
+            (subtractFromInventory.get(runEntry.product.id) ?? 0) + 1
+          );
+        }
+
+        return;
+      }
+
+      nextShippedRunIds.delete(runEntry.run.id);
+
+      if (wasShipped && runEntry.run.status === "finished") {
+        addBackToInventory.set(
+          runEntry.product.id,
+          (addBackToInventory.get(runEntry.product.id) ?? 0) + 1
+        );
+      }
+    });
+
+    adjustManualProductStock(subtractFromInventory, "subtract");
+    adjustManualProductStock(addBackToInventory, "add");
+    setShippedInventoryRunIds(nextShippedRunIds);
 
     const nextManualStages = {
-      ...manualRunStages,
-      [runId]: stage
+      ...manualRunStages
     };
+
+    moveEntries.forEach((entry) => {
+      nextManualStages[entry.run.id] = stage;
+    });
 
     setManualRunStages(nextManualStages);
     setPendingUndoMove(null);
     setPendingUndoKanbanMove({
-      previousStage,
-      runId
+      previousShippedRunIds: [...shippedInventoryRunIds],
+      previousStages,
+      runIds: moveEntries.map((entry) => entry.run.id)
     });
     savePlannerSnapshot(runs, {
       manualRunStages: nextManualStages,
       shippedInventoryRunIds: [...nextShippedRunIds]
     });
 
+    const firstEntry = moveEntries[0];
+    const movedLabel =
+      moveEntries.length === 1
+        ? firstEntry.product.name
+        : `${firstEntry.run.project} (${moveEntries.length} prints)`;
     const nextNotice: Notice = {
       title: "Print moved",
-      body: `${runEntry.product.name} moved to ${PROJECT_STAGES.find(
+      body: `${movedLabel} moved to ${PROJECT_STAGES.find(
         (entry) => entry.id === stage
       )?.label.toLowerCase()}.`,
       tone: "neutral"
@@ -4141,7 +4253,9 @@ export function WeekPlanner() {
     window.setTimeout(() => {
       setNotice((current) => (current === nextNotice ? null : current));
       setPendingUndoKanbanMove((current) =>
-        current?.runId === runId ? null : current
+        current && moveEntries.every((entry) => current.runIds.includes(entry.run.id))
+          ? null
+          : current
       );
     }, 5000);
   }
@@ -5636,7 +5750,6 @@ export function WeekPlanner() {
                   const projectColor = getProjectColor(group.project, projectColors);
                   const groupKey = `${stage.id}-${group.id}`;
                   const isExpanded = expandedProjectIds.has(groupKey);
-                  const isSingleRun = group.runs.length === 1;
                   const groupTotal = group.runs[0]?.total ?? group.runs.length;
                   const singleRunProductName = group.runs[0]?.product.name ?? group.project;
                   const summaryLine =
@@ -5657,14 +5770,15 @@ export function WeekPlanner() {
                       className={`project-row kanban-project-group ${
                         projectColor ? "has-project-color" : ""
                       }`}
-                      draggable={isSingleRun}
+                      draggable={group.runs.length > 0}
                       key={`${stage.id}-${group.id}`}
                       onDragEnd={handlePrintDragEnd}
-                      onDragStart={(event) => {
-                        if (isSingleRun) {
-                          handleKanbanRunDragStart(event, group.runs[0].run.id);
-                        }
-                      }}
+                      onDragStart={(event) =>
+                        handleKanbanGroupDragStart(
+                          event,
+                          group.runs.map((entry) => entry.run.id)
+                        )
+                      }
                       style={
                         {
                           "--project-color": projectColor ?? "#1f1f1d"

@@ -287,3 +287,62 @@ button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   background: transparent;
   color: inherit;
 }
+
+/* Fine controls, solid initials, stronger structural boundaries. */
+.card-topline span, .card-topline strong,
+.progress-track, .project-column-heading span,
+.box-add-pill, .product-add-button { border-width: 1px; }
+.card-topline .assignee-pill, .mobile-print-card .assignee-pill,
+.new-print-preview .assignee-pill {
+  background: var(--product-ink, #1f1f1d);
+  color: var(--product-color, #fff);
+  border: 0;
+}
+.project-column-heading span { background: #1f1f1d; color: #fff; border: 0; }
+.print-card.status-printing .progress-track {
+  flex: 0 0 8px;
+  margin-top: 26px;
+  margin-bottom: 6px;
+}
+.print-card.status-printing .card-body { margin-top: 0; }
+
+/* A short midnight tail keeps its true duration; its controls must fit inside it. */
+.print-card.is-continuation-only.is-too-tight:not(.is-expanded) { padding: 0; }
+.print-card.is-continuation-only.is-too-tight:not(.is-expanded) .card-topline { display: none; }
+.print-card.is-continuation-only.is-too-tight:not(.is-expanded) .continuation-review-toggle {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background-position: right 4px center;
+  background-size: auto min(18px, calc(var(--duration-hours) * var(--hour-height) - 2px));
+}
+.current-time-marker::after { height: 2px; top: -1px; }
+.current-time-marker::before { height: 8px; width: 8px; top: -4px; }
+
+/* Product data is a neutral editor, independent of each product's display ink. */
+.product-row > span, .product-data-edit label span { color: var(--product-ink); }
+.product-data-edit input, .product-data-edit select {
+  background: #fff;
+  color: #1f1f1d;
+}
+.inventory-popup, .box-popup {
+  background: #b92135;
+  border-color: #b92135;
+  color: #ffd1e9;
+}
+.inventory-popup div, .box-popup div { gap: 8px; }
+.inventory-popup span, .box-popup span { line-height: 1.25; }
+.inventory-popup .popup-close, .box-popup .popup-close { color: inherit; }
+@media (min-width: 721px) {
+  :root { --hour-height: clamp(12px, calc((100svh - 350px) / 48), 18px); }
+  .calendar-week-header { padding-top: 4px; margin-bottom: 4px; }
+  .week-days-wrap { min-height: 30px; padding-top: 2px; }
+  .printer-calendar .time-gutter { width: 16px; }
+  .time-label { left: 5px; width: 8px; }
+  .printer-calendars > .printer-calendar:first-child .calendar-frame { anchor-name: --calendar-start; }
+  .inventory-popup, .box-popup { position-anchor: --calendar-start; }
+  .inventory-popup { top: anchor(top, 122px); anchor-name: --pellet-warning; }
+  .box-popup { top: anchor(top, 122px); }
+  .inventory-popup ~ .box-popup { position-anchor: --pellet-warning; top: calc(anchor(bottom, 200px) + 12px); }
+}

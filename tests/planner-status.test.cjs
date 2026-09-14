@@ -20,7 +20,7 @@ const names = [
   'getProductInventory', 'isRunAwaitingReview', 'isRunFinishedOrAwaitingReview',
   'getAutomaticProjectStage', 'getAutomaticRunStage', 'getRunStage',
   'getRunActionLabels', 'getSegmentLabel', 'getProgress', 'getCardActions',
-  'canRemoveProject', 'requestProjectRemoval', 'confirmProjectRemoval',
+  'subtractShippingBox', 'canRemoveProject', 'requestProjectRemoval', 'confirmProjectRemoval',
   'adjustManualProductStock', 'updateRunStatus', 'handleProjectStageDrop', 'undoLastKanbanMove'
 ];
 const compiled = ts.transpileModule(names.map(name => {
@@ -28,7 +28,7 @@ const compiled = ts.transpileModule(names.map(name => {
   return functions.get(name);
 }).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
 const now = new Date('2026-09-14T12:00:00Z');
-const product = { id: 'stool', name: 'stool', printDurationHours: 4, pelletUsageKg: 2 };
+const product = { id: 'stool', name: 'stool', printDurationHours: 4, pelletUsageKg: 2, shippingBoxType: 'test-box' };
 function run(id, status = 'planned', date = '2026-09-10T08:00:00Z') {
   return { id, status, productId: product.id, project: 'project', startDateTime: date };
 }
@@ -39,14 +39,15 @@ function harness(runs = []) {
     PROJECT_STAGES: ['planned', 'printing', 'ready', 'packed', 'shipped'].map(id => ({ id, label: id })),
     manualRunStages: {}, shippedInventoryRunIds: new Set(), manualProductInventory: { stool: runs.filter(run => run.status === "finished").length },
     materialStockKg: 20, pendingUndoKanbanMove: null, nativeDragRef: { current: null },
-    window: { setTimeout() {} }, savePlannerSnapshot() {}, boxesUsed: 0,
-    subtractShippingBox() { ctx.boxesUsed++; },
+    window: { setTimeout() {} }, savePlannerSnapshot() {},
+    shippingBoxTypes: ['test-box'], shippingBoxStock: { 'test-box': 10 },
   };
   const updates = [];
   for (const [setter, key] of Object.entries({
     setRuns: 'runs', setManualProductInventory: 'manualProductInventory',
     setManualRunStages: 'manualRunStages', setShippedInventoryRunIds: 'shippedInventoryRunIds',
     setPendingUndoKanbanMove: 'pendingUndoKanbanMove', setPendingUndoMove: 'pendingUndoMove',
+    setShippingBoxStock: 'shippingBoxStock',
     setHiddenProjectIds: 'hiddenProjectIds', setExpandedProjectIds: 'expandedProjectIds',
     setPendingProjectRemoval: 'pendingProjectRemoval',
     setMaterialStockKg: 'materialStockKg', setNotice: 'notice', setDragState: 'dragState'
@@ -106,7 +107,7 @@ test('explicit start, review and completion control stage and inventory', () => 
   h.updateRunStatus(h.runs[0], 'finished');
   assert.equal(h.stock(), 1);
   assert.equal(h.materialStockKg, 18);
-  assert.equal(h.boxesUsed, 1);
+  assert.equal(h.shippingBoxStock['test-box'], 9);
   h.updateRunStatus(h.runs[0], 'finished');
   assert.equal(h.stock(), 1);
   assert.equal(h.materialStockKg, 18);
@@ -177,4 +178,32 @@ test('remove shipped project hides only its overview and never deducts inventory
   assert.equal(h.stock(), stock);
   assert.deepEqual([...h.shippedInventoryRunIds], shippedIds);
   assert.equal(JSON.stringify(h.runs), runs);
+});
+
+
+test('completion books pellets and boxes once; shipping and undo do not book them again', () => {
+  const h = harness([run('a', 'printing')]);
+  h.updateRunStatus(h.runs[0], 'finished');
+  h.updateRunStatus(h.runs[0], 'finished');
+  assert.equal(h.materialStockKg, 18);
+  assert.equal(h.shippingBoxStock['test-box'], 9);
+  h.drop(['a'], 'shipped', false);
+  assert.equal(h.stock(), 0);
+  assert.equal(h.materialStockKg, 18);
+  assert.equal(h.shippingBoxStock['test-box'], 9);
+  h.undoLastKanbanMove();
+  assert.equal(h.stock(), 1);
+  assert.equal(h.materialStockKg, 18);
+  assert.equal(h.shippingBoxStock['test-box'], 9);
+});
+
+test('failed prints consume pellets but no shipping box; board moves alone consume neither', () => {
+  const h = harness([run('a', 'printing')]);
+  h.drop(['a'], 'ready', false);
+  h.drop(['a'], 'shipped', false);
+  assert.equal(h.materialStockKg, 20);
+  assert.equal(h.shippingBoxStock['test-box'], 10);
+  h.updateRunStatus(h.runs[0], 'failed');
+  assert.equal(h.materialStockKg, 18);
+  assert.equal(h.shippingBoxStock['test-box'], 10);
 });

@@ -398,7 +398,7 @@ button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .kanban-project-group > .project-remove-button:disabled { opacity: .4; cursor: default; }
 
 /* Shared alert system: one ink for text, outlines, controls and vector icons. */
-:root { --alert-surface: #780b32; --alert-ink: #ffd1e9; }
+:root { --alert-surface: #94002f; --alert-ink: #ffd1e9; }
 .app-shell :is(.inventory-popup, .box-popup, .start-popup, .notice-popup, .delete-popup, .form-alert) {
   --ink: var(--alert-ink);
   background: var(--alert-surface);
@@ -425,4 +425,13 @@ button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   background: currentColor;
   mask: url("/icons/cancel.svg") center / 12px 12px no-repeat;
   pointer-events: none;
+}
+
+/* Completed production is muted without fading text into a dark product surface. */
+.print-card.is-production-complete,
+.mobile-print-card.is-production-complete,
+.month-print-chip.is-production-complete {
+  color: var(--product-ink);
+  opacity: 1;
+  filter: grayscale(1);
 }

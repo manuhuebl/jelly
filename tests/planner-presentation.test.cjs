@@ -14,7 +14,7 @@ const { getProductColors, getEventColors } = moduleExports;
 test('saved product colors get presentation overrides without mutating the record', () => {
   const saved = Object.freeze({ id: 'len', color: '#a1a3de', printDurationHours: 8.5 });
   assert.equal(getProductColors(saved).background, '#482049');
-  assert.equal(getProductColors(saved).foreground, '#f0dfa4');
+  assert.equal(getProductColors(saved).foreground, '#e1c4ff');
   assert.equal(saved.color, '#a1a3de');
   assert.equal(saved.printDurationHours, 8.5);
 });
@@ -22,7 +22,7 @@ test('saved product colors get presentation overrides without mutating the recor
 test('custom products retain their saved color and get legible contrasting text', () => {
   const saved = Object.freeze({ id: 'custom-object', color: '#fff' });
   assert.equal(getProductColors(saved).background, '#fff');
-  assert.notEqual(getProductColors(saved).foreground, '#f0dfa4');
+  assert.notEqual(getProductColors(saved).foreground, '#e1c4ff');
   assert.equal(getProductColors({ id: 'custom-object', color: '#000' }).foreground, '#f0dfa4');
 });
 

@@ -396,3 +396,33 @@ button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 }
 .kanban-project-group > .project-remove-button { justify-self: end; }
 .kanban-project-group > .project-remove-button:disabled { opacity: .4; cursor: default; }
+
+/* Shared alert system: one ink for text, outlines, controls and vector icons. */
+:root { --alert-surface: #780b32; --alert-ink: #ffd1e9; }
+.app-shell :is(.inventory-popup, .box-popup, .start-popup, .notice-popup, .delete-popup, .form-alert) {
+  --ink: var(--alert-ink);
+  background: var(--alert-surface);
+  color: var(--alert-ink);
+  border: 2px solid currentColor;
+}
+.app-shell :is(.inventory-popup, .box-popup, .start-popup, .notice-popup, .delete-popup) button:not(.icon-button) {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+.app-shell :is(.inventory-popup, .box-popup, .start-popup, .notice-popup, .delete-popup) .icon-button {
+  background: transparent;
+  background-image: none;
+  color: inherit;
+  border: 0;
+  filter: none;
+  opacity: 1;
+}
+.app-shell :is(.inventory-popup, .box-popup, .start-popup, .notice-popup, .delete-popup) .icon-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  mask: url("/icons/cancel.svg") center / 12px 12px no-repeat;
+  pointer-events: none;
+}

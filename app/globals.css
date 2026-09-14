@@ -1340,7 +1340,7 @@ h2 {
   color: var(--surface);
 }
 
-.month-print-chip.is-past {
+.month-print-chip.is-production-complete {
   filter: grayscale(1) saturate(0);
   opacity: 0.56;
 }
@@ -1537,7 +1537,7 @@ h2 {
   touch-action: none;
 }
 
-.print-card.is-past {
+.print-card.is-production-complete {
   color: rgba(31, 31, 29, 0.62);
   filter: grayscale(1) saturate(0);
   opacity: 0.52;
@@ -1757,7 +1757,7 @@ h2 {
   white-space: nowrap;
 }
 
-.print-card.is-past .card-actions button {
+.print-card.is-production-complete .card-actions button {
   background: rgba(255, 255, 255, 0.78);
   color: var(--ink);
 }
@@ -3394,7 +3394,7 @@ h2 {
     text-align: left;
   }
 
-  .mobile-print-card.is-past {
+  .mobile-print-card.is-production-complete {
     color: rgba(31, 31, 29, 0.62);
     cursor: default;
     filter: grayscale(1) saturate(0);

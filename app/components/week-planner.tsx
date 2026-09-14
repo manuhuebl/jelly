@@ -29,6 +29,8 @@ import {
   type StoredPlannerState
 } from "../lib/planner-persistence";
 
+import { getEventColors, getProductColors } from "../lib/planner-presentation";
+
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const DAY_HOURS = 24;
@@ -101,6 +103,7 @@ const initialTimelineEvents = [
 ] as const;
 
 type ProductStyle = CSSProperties & {
+  "--product-ink": string;
   "--product-color": string;
   "--product-border": string;
   "--project-color"?: string;
@@ -126,6 +129,7 @@ type CurrentTimeStyle = CSSProperties & {
 };
 
 type TimelineStyle = CSSProperties & {
+  "--event-ink": string;
   "--event-color": string;
   "--timeline-left": string;
   "--timeline-top": string;
@@ -589,9 +593,11 @@ function snapToHalfHour(hours: number) {
 }
 
 function getProductStyle(product: Product): ProductStyle {
+  const colors = getProductColors(product);
   return {
-    "--product-color": product.color,
-    "--product-border": product.borderColor
+    "--product-color": colors.background,
+    "--product-border": colors.foreground,
+    "--product-ink": colors.foreground
   };
 }
 
@@ -1134,7 +1140,7 @@ function isRunAwaitingReview(entry: ScheduledRun, now: Date) {
   return entry.run.status === "printing" && entry.end <= now;
 }
 
-function isRunDoneForProjectStage(entry: ScheduledRun, now: Date) {
+function isRunFinishedOrAwaitingReview(entry: ScheduledRun, now: Date) {
   return entry.run.status === "finished" || isRunAwaitingReview(entry, now);
 }
 
@@ -1149,7 +1155,7 @@ function getAutomaticProjectStage(project: ProjectOverviewRow, now: Date): Proje
 
   if (
     project.runs.length > 0 &&
-    project.runs.every((entry) => isRunDoneForProjectStage(entry, now))
+    project.runs.every((entry) => isRunFinishedOrAwaitingReview(entry, now))
   ) {
     return "ready";
   }
@@ -1181,7 +1187,7 @@ function getAutomaticRunStage(entry: ScheduledRun, now: Date): ProjectStage {
     return "printing";
   }
 
-  if (entry.run.status === "finished" || isRunAwaitingReview(entry, now)) {
+  if (isRunFinishedOrAwaitingReview(entry, now)) {
     return "ready";
   }
 
@@ -1541,10 +1547,6 @@ function getRunActionLabels(entry: ScheduledRun, now: Date) {
     return ["print okay?", "print not okay?"];
   }
 
-  if (entry.end <= now) {
-    return ["print okay?", "print not okay?"];
-  }
-
   if ((entry.run.status === "planned" || entry.run.status === "reprint") && entry.start <= now) {
     return ["print started"];
   }
@@ -1603,7 +1605,7 @@ function buildRunTitle(entry: ScheduledRun) {
     .join(" / ");
 }
 
-function getSegmentLabel(segment: CalendarSegment, now: Date) {
+function getSegmentLabel(segment: CalendarSegment) {
   if (segment.startsBeforeSegment && segment.run.status !== "failed") {
     return "continued";
   }
@@ -1614,13 +1616,6 @@ function getSegmentLabel(segment: CalendarSegment, now: Date) {
 
   if (segment.run.status === "failed") {
     return "failed";
-  }
-
-  if (
-    segment.end <= now &&
-    (segment.run.status === "planned" || segment.run.status === "reprint")
-  ) {
-    return "printed";
   }
 
   return statusLabels[segment.run.status];
@@ -1770,17 +1765,9 @@ function getTimelineEntries(
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
-function getTimelineColor(entry: TimelineEvent) {
-  const colors: Record<TimelineKind, string> = {
-    custom: entry.color ?? "#d65454",
-    deadline: "#1f1f1d",
-    event: "#898cd6",
-    ooo: "#c8c4be",
-    "social media": "#fac7c2",
-    task: "#b3c3b2"
-  };
-
-  return entry.color ?? colors[entry.type];
+function getTimelineColorStyle(entry: TimelineEvent) {
+  const colors = getEventColors(entry);
+  return { "--event-color": colors.background, "--event-ink": colors.foreground };
 }
 
 function getTimelineStyle(entry: TimelineEntry, weekStart: Date, index: number): TimelineStyle {
@@ -1800,7 +1787,7 @@ function getTimelineStyle(entry: TimelineEntry, weekStart: Date, index: number):
   );
 
   return {
-    "--event-color": getTimelineColor(entry),
+    ...getTimelineColorStyle(entry),
     "--timeline-left": `${left}%`,
     "--timeline-top": `${10 + index * 28}px`,
     "--timeline-width": entry.type === "deadline" ? "12.8%" : `${width}%`
@@ -3533,7 +3520,7 @@ export function WeekPlanner() {
       return ["edit", ...actions];
     }
 
-    if (isPast) {
+    if (isPast || run.status === "finished") {
       return run.status === "failed" ? ["edit", "reschedule"] : ["edit", ...actions];
     }
 
@@ -4891,7 +4878,7 @@ export function WeekPlanner() {
                         }`}
                         key={`${entry.id}-${day.date.toISOString()}`}
                         style={
-                          { "--event-color": getTimelineColor(entry) } as CSSProperties
+                          getTimelineColorStyle(entry) as CSSProperties
                         }
                       >
                         {getTimelineLabel(entry)}
@@ -4927,13 +4914,12 @@ export function WeekPlanner() {
                       ) : (
                         segments.map((segment) => {
                           const progress = getProgress(segment, now);
-                          const isPast =
-                            segment.end <= now || segment.run.status === "finished";
+                          const isProductionComplete = isRunFinishedOrAwaitingReview(segment, now);
                           const starter = segment.run.assignee
                             ? starterById.get(segment.run.assignee)
                             : null;
 
-                          const segmentLabel = getSegmentLabel(segment, now);
+                          const segmentLabel = getSegmentLabel(segment);
                           const canEditMobile =
                             segment.run.status === "planned" ||
                             segment.run.status === "reprint" ||
@@ -4944,7 +4930,7 @@ export function WeekPlanner() {
                           return (
                             <article
                               className={`mobile-print-card status-${segment.run.status} ${
-                                isPast ? "is-past" : ""
+                                isProductionComplete ? "is-production-complete" : ""
                               } ${
                                 segment.run.status === "failed" ? "is-failed" : ""
                               }`}
@@ -5012,11 +4998,7 @@ export function WeekPlanner() {
           const layout = layoutRuns(runs, printer.id, weekStart, productById);
 
           return (
-            <section className="printer-calendar" key={printer.id}>
-              <div className="printer-title">
-                <h2>{printer.name}</h2>
-              </div>
-
+            <section className="printer-calendar" key={printer.id} aria-label={`Printer ${printer.name}`}>
               <div className="time-gutter" aria-hidden="true">
                 {HOURS.map((hour) => (
                   <span
@@ -5071,8 +5053,8 @@ export function WeekPlanner() {
                         );
                         const progress = getProgress(segment, now);
                         const actions = getRunActionLabels(segment, now);
-                        const isPast =
-                          segment.end <= now || segment.run.status === "finished";
+                        const isPast = segment.end <= now;
+                        const isProductionComplete = isRunFinishedOrAwaitingReview(segment, now);
                         const cardActions = getCardActions(segment.run, actions, isPast);
                         const hasEditAction =
                           !segment.startsBeforeSegment && cardActions.includes("edit");
@@ -5096,7 +5078,7 @@ export function WeekPlanner() {
                         const isCardExpanded = isExpanded || isContinuationExpanded;
                         const showCompactProject =
                           isShort && !isExpanded && canShowCompactProject(segment);
-                        const segmentLabel = getSegmentLabel(segment, now);
+                        const segmentLabel = getSegmentLabel(segment);
                         const showStatusPill = shouldShowStatusPill(segmentLabel);
                         const statusInActions =
                           showStatusPill &&
@@ -5126,7 +5108,7 @@ export function WeekPlanner() {
                               segment.continuesAfterSegment ? "continues-after" : ""
                             } ${isShort ? "is-short" : ""} ${
                               isCardExpanded ? "is-expanded" : ""
-                            } ${isPast ? "is-past" : ""} ${
+                            } ${isProductionComplete ? "is-production-complete" : ""} ${
                               segment.run.status === "failed" ? "is-failed" : ""
                             } ${
                               canMoveRun(segment.run) ? "is-movable" : ""
@@ -5217,7 +5199,7 @@ export function WeekPlanner() {
                                       <div className="card-topline-actions">
                                         {progress !== null ? <strong>{progress}%</strong> : null}
                                         {statusInActions ? <span>{segmentLabel}</span> : null}
-                                        {hasEditAction ? (
+                                        {hasEditAction && !isShort ? (
                                           <button
                                             className="card-pill-button"
                                             onClick={(event) =>
@@ -5271,6 +5253,19 @@ export function WeekPlanner() {
                                         </span>
                                       ) : null}
                                     </div>
+
+                                    {isShort && isExpanded && hasEditAction ? (
+                                      <div className="short-print-edit">
+                                        <button
+                                          className="card-pill-button"
+                                          onClick={(event) => handleRunAction(event, segment.run, "edit")}
+                                          onPointerDown={(event) => event.stopPropagation()}
+                                          type="button"
+                                        >
+                                          edit
+                                        </button>
+                                      </div>
+                                    ) : null}
 
                                     {progress === null ? (
                                       <div className="card-times">
@@ -5653,8 +5648,8 @@ export function WeekPlanner() {
                             className={`month-print-chip status-${entry.run.status} ${
                               entry.run.status === "failed" ? "is-failed" : ""
                             } ${
-                              entry.end <= now || entry.run.status === "finished"
-                                ? "is-past"
+                              isRunFinishedOrAwaitingReview(entry, now)
+                                ? "is-production-complete"
                                 : ""
                             }`}
                             draggable={canMoveRun(entry.run)}
@@ -5699,7 +5694,7 @@ export function WeekPlanner() {
                               key={entry.id}
                               style={
                                 {
-                                  "--event-color": getTimelineColor(entry)
+                                  ...getTimelineColorStyle(entry)
                                 } as CSSProperties & { "--event-color": string }
                               }
                             >

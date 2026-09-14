@@ -1,0 +1,236 @@
+/* Approved planner theme. Data, saved custom colors and production state are separate. */
+:root {
+  --background: #fff;
+  --calendar-nav-space: 40px;
+  --card-gap: 10px;
+  --edit-font-size: 11px;
+}
+
+/* Product and event pairs cascade to labels, actions and inventory editors. */
+[style*="--product-color"] {
+  --ink: var(--product-ink, #1f1f1d);
+  --ink-muted: var(--product-ink, #1f1f1d);
+  color: var(--ink);
+}
+.timeline-item, .mobile-event-item, .month-event-chip {
+  color: var(--event-ink, #1f1f1d);
+}
+.timeline-item.is-past, .mobile-event-item.is-past {
+  background: var(--event-color);
+  border-color: currentColor;
+  color: var(--event-ink);
+}
+
+.topbar .primary-action, .primary-action,
+.view-toggle button.is-active {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+.mini-edit-pill, .card-pill-button, .card-topline button, .mobile-edit-button,
+.month-edit-pill, .stock-edit-button, .product-edit-button,
+.material-edit-pill, .timeline-edit-button, .month-event-edit {
+  font-size: var(--edit-font-size);
+  font-weight: 400;
+  line-height: 1;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  box-shadow: none;
+}
+.box-add-pill, .product-add-button {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+.print-card .card-actions button,
+.print-card.is-production-complete .card-actions button,
+.print-card.is-failed .card-topline button,
+.mobile-print-card.is-failed .mobile-edit-button {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+
+/* One edge-to-edge edit region in event bars, regardless of view or category. */
+.timeline-item .timeline-edit-button,
+.mobile-event-item .timeline-edit-button,
+.month-event-chip .month-event-edit {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  height: auto;
+  min-height: 0;
+  width: 38px;
+  margin: 0;
+  padding: 0 7px;
+  border: 0;
+  border-left: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-size: var(--edit-font-size);
+  line-height: 1;
+}
+.month-event-chip {
+  position: relative;
+  display: block;
+  padding: 4px 43px 4px 6px;
+  min-height: 22px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.month-event-chip span { white-space: normal; }
+
+.project-overview .eyebrow, .inventory-summary .eyebrow,
+.product-inventory .eyebrow, .data-drawer summary {
+  font-size: 18px;
+  line-height: 1.05;
+}
+.week-arrow, .month-arrow {
+  background-size: 28.5px auto;
+  width: 33px;
+  height: 33px;
+  min-height: 33px;
+  top: 0;
+  border: 0;
+}
+.data-drawer summary::before { width: 15px; height: 15px; }
+.project-arrow {
+  width: 27px;
+  height: 27px;
+  background-size: 18px auto;
+  align-self: end;
+  justify-self: end;
+}
+.mobile-next-week-icon { width: 30px; height: 18px; }
+.show-more-button { background-size: 15px auto; width: 22px; height: 22px; }
+.show-more-button, .continuation-review-toggle {
+  border: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+/* Draw only actual print boundaries: midnight is an open end, not a finished run. */
+.print-card.continues-after {
+  border: 0;
+  box-shadow: inset 1px 0 var(--project-color, var(--line)),
+    inset -1px 0 var(--project-color, var(--line)),
+    inset 0 1px var(--project-color, var(--line));
+}
+.print-card.is-continuation {
+  border: 0;
+  box-shadow: inset 1px 0 var(--project-color, var(--line)),
+    inset -1px 0 var(--project-color, var(--line)),
+    inset 0 -1px var(--project-color, var(--line));
+}
+.print-card.is-continuation.continues-after {
+  box-shadow: inset 1px 0 var(--project-color, var(--line)),
+    inset -1px 0 var(--project-color, var(--line));
+}
+.print-card.is-continuation .card-topline { justify-content: flex-start; text-align: left; }
+.print-card.is-continuation .card-status-pills { margin-left: 0; margin-right: auto; }
+.print-card.is-continuation .card-status-pills > span {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 3px 5px;
+  font-size: 11px;
+}
+
+/* Short runs use their whole text area. Edit exists only when expanded. */
+.print-card.is-short:not(.is-expanded) { padding: 6px 25px 6px 6px; }
+.print-card.is-short:not(.is-expanded) .card-topline { display: none; }
+.print-card.is-short:not(.is-expanded) .card-body {
+  padding: 0;
+  margin: 0;
+  gap: 0;
+  display: block;
+}
+.print-card.has-starter.is-short:not(.status-printing):not(.status-finished):not(.status-failed):not(.is-continuation):not(.is-expanded) .card-body {
+  padding-top: 0;
+}
+.print-card.is-short:not(.is-expanded) .card-body strong {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.05;
+}
+.print-card.is-short:not(.is-expanded) .compact-project-label { display: none; }
+.print-card.is-short.is-expanded {
+  height: auto;
+  min-height: 105px;
+  padding: 8px 8px 34px;
+  overflow: visible;
+}
+.print-card.is-short.is-expanded .card-body { padding: 0; margin: 0; }
+.short-print-edit { order: 4; margin-top: 8px; }
+.print-card.is-short.is-expanded .show-more-button { bottom: 6px; right: 6px; }
+
+/* Desktop calendar and timeline share one width; arrows have their own side rails. */
+@media (min-width: 721px) {
+  .calendar-shell {
+    container-type: inline-size;
+    --time-gutter: 0px;
+    --calendar-width: calc(100cqw - (var(--calendar-nav-space) * 2) - 2px);
+    --calendar-day-width: calc(var(--calendar-width) / 7);
+  }
+  .calendar-week-header, .printer-calendar {
+    grid-template-columns: minmax(0, 1fr);
+    width: calc(100% - (var(--calendar-nav-space) * 2));
+    margin-inline: var(--calendar-nav-space);
+  }
+  .calendar-time-spacer { display: none; }
+  .calendar-week-header { padding-top: 8px; margin-bottom: 8px; }
+  .week-days-wrap { grid-column: 1; min-height: 38px; padding-top: 5px; }
+  .week-arrow.is-left { left: calc(-1 * var(--calendar-nav-space)); }
+  .week-arrow.is-right { right: calc(-1 * var(--calendar-nav-space)); }
+  .week-day-row .day-heading:first-child { padding-left: 0; }
+  .week-day-row .day-heading:last-child { padding-right: 8px; }
+  .printer-calendar { position: relative; }
+  .printer-calendar .calendar-frame {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    overflow: visible;
+    position: relative;
+  }
+  .time-board { width: 100%; }
+  .printer-calendar .time-gutter {
+    grid-column: 1;
+    grid-row: 1;
+    z-index: 3;
+    pointer-events: none;
+    width: 10px;
+  }
+  .time-label {
+    left: 1px;
+    right: auto;
+    width: 8px;
+    text-align: center;
+    font-size: 7px;
+    line-height: 1;
+    top: calc((var(--hour) + .5) * var(--hour-height));
+    transform: translateY(-50%);
+    padding: 0;
+    color: #555 !important;
+  }
+  .event-timeline {
+    min-width: 0;
+    width: calc(100% - (var(--calendar-nav-space) * 2));
+    margin-inline: var(--calendar-nav-space);
+  }
+  .event-timeline .timeline-row, .event-timeline .timeline-title,
+  .event-timeline .timeline-board, .event-timeline .timeline-actions,
+  .event-timeline .event-form {
+    min-width: 0;
+    width: 100%;
+    margin-inline: 0;
+  }
+  .event-timeline .timeline-row { grid-template-columns: minmax(0, 1fr); }
+  .month-view { padding-top: 44px; }
+}
+button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

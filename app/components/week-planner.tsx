@@ -618,7 +618,7 @@ function getProductStyleWithProject(
 ): ProductStyle {
   return {
     ...getProductStyle(product),
-    "--project-color": getProjectColor(project, projectColors) ?? "#1f1f1d"
+    "--project-color": getProjectColor(project, projectColors) ?? "transparent"
   };
 }
 
@@ -1959,7 +1959,7 @@ export function WeekPlanner() {
     () => new Set()
   );
   const [pendingProjectRemoval, setPendingProjectRemoval] =
-    useState<ProjectOverviewRow | null>(null);
+    useState<Pick<ProjectOverviewRow, "id" | "project"> | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [isPlannerLoaded, setIsPlannerLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -2538,12 +2538,20 @@ export function WeekPlanner() {
     });
   }
 
-  function requestProjectRemoval(project: ProjectOverviewRow) {
+  function canRemoveProject(projectId: string) {
+    const entries = kanbanRows.filter((entry) => entry.projectKey === projectId);
+    return entries.length > 0 && entries.every(
+      (entry) => getRunStage(entry, manualRunStages, now) === "shipped"
+    );
+  }
+
+  function requestProjectRemoval(project: Pick<ProjectOverviewRow, "id" | "project">) {
+    if (!canRemoveProject(project.id)) return;
     setPendingProjectRemoval(project);
   }
 
   function confirmProjectRemoval() {
-    if (!pendingProjectRemoval) {
+    if (!pendingProjectRemoval || !canRemoveProject(pendingProjectRemoval.id)) {
       return;
     }
 
@@ -2556,7 +2564,7 @@ export function WeekPlanner() {
     setExpandedProjectIds((current) => {
       const next = new Set(current);
 
-      next.delete(pendingProjectRemoval.id);
+      PROJECT_STAGES.forEach((stage) => next.delete(`${stage.id}-${pendingProjectRemoval.id}`));
       return next;
     });
     setPendingProjectRemoval(null);
@@ -5807,6 +5815,18 @@ export function WeekPlanner() {
                           className={`project-arrow ${isExpanded ? "is-open" : ""}`}
                         />
                       </button>
+                      {stage.id === "shipped" ? (
+                        <button
+                          className="mini-edit-pill project-remove-button"
+                          disabled={!canRemoveProject(group.id)}
+                          title={canRemoveProject(group.id) ? "Remove completed project from overview" : "Ship all prints in this project before removing it"}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={() => requestProjectRemoval({ id: group.id, project: group.project })}
+                          type="button"
+                        >
+                          remove
+                        </button>
+                      ) : null}
                       {isExpanded ? (
                         <div className="kanban-run-list">
                         {group.runs.map((entry) => {

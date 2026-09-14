@@ -126,7 +126,7 @@
   content: "";
   position: absolute;
   inset: -1px;
-  border: 2px solid currentColor;
+  border: 2px solid var(--project-color, transparent);
   pointer-events: none;
   z-index: 2;
 }
@@ -335,7 +335,7 @@ button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .inventory-popup span, .box-popup span { line-height: 1.25; }
 .inventory-popup .popup-close, .box-popup .popup-close { color: inherit; }
 @media (min-width: 721px) {
-  :root { --hour-height: clamp(12px, calc((100svh - 350px) / 48), 18px); }
+  :root { --hour-height: clamp(15px, calc((100svh - 350px) / 38.4), 22.5px); }
   .calendar-week-header { padding-top: 4px; margin-bottom: 4px; }
   .week-days-wrap { min-height: 30px; padding-top: 2px; }
   .printer-calendar .time-gutter { width: 16px; }
@@ -383,3 +383,16 @@ button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   mask-position: center;
   mask-size: 15px auto;
 }
+
+/* The right-hand notices share one palette, including neutral confirmations. */
+.inventory-popup, .box-popup, .start-popup, .notice-popup,
+.notice-popup.is-neutral, .delete-popup, .delete-popup.is-neutral {
+  background: #780b32;
+  border-color: #780b32;
+  color: #ffd1e9;
+}
+.print-card.is-continuation-only.is-too-tight.has-previous-day-control .continuation-review-toggle {
+  left: calc(-1 * var(--calendar-day-width) + 100% - 26px);
+}
+.kanban-project-group > .project-remove-button { justify-self: end; }
+.kanban-project-group > .project-remove-button:disabled { opacity: .4; cursor: default; }

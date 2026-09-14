@@ -4809,21 +4809,9 @@ export function WeekPlanner() {
       <section className="calendar-shell" aria-label="Production calendar">
         {viewMode === "week" ? (
           <>
-        <div className="calendar-week-header" aria-label="Week navigation">
+        <div className="calendar-week-header" aria-label="Week days">
           <div className="calendar-time-spacer" />
           <div className="week-days-wrap">
-            {canGoBack ? (
-              <button
-                aria-label="Previous week"
-                className="week-arrow is-left"
-                onClick={() => {
-                  setWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET));
-                  setMobileWeekCount(1);
-                }}
-                type="button"
-              >
-              </button>
-            ) : null}
             <div className="week-day-row" aria-hidden="true">
               {weekDays.map((day) => (
                 <div
@@ -4837,18 +4825,6 @@ export function WeekPlanner() {
                 </div>
               ))}
             </div>
-            {canGoForward ? (
-              <button
-                aria-label="Next week"
-                className={`week-arrow is-right ${!canGoBack ? "is-single" : ""}`}
-                onClick={() => {
-                  setWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET));
-                  setMobileWeekCount(1);
-                }}
-                type="button"
-              >
-              </button>
-            ) : null}
           </div>
         </div>
 
@@ -5306,6 +5282,33 @@ export function WeekPlanner() {
           );
         })}
         </section>
+
+        <nav className="week-navigation" aria-label="Week navigation">
+            {canGoBack ? (
+              <button
+                aria-label="Previous week"
+                className="week-arrow is-left"
+                onClick={() => {
+                  setWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET));
+                  setMobileWeekCount(1);
+                }}
+                type="button"
+              >
+              </button>
+            ) : null}
+            {canGoForward ? (
+              <button
+                aria-label="Next week"
+                className={`week-arrow is-right ${!canGoBack ? "is-single" : ""}`}
+                onClick={() => {
+                  setWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET));
+                  setMobileWeekCount(1);
+                }}
+                type="button"
+              >
+              </button>
+            ) : null}
+        </nav>
 
         <section className="event-timeline" aria-label="Marketing and deadline timeline">
           {selectedDeadline ? (

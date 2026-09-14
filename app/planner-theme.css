@@ -1,8 +1,8 @@
 /* Approved planner theme. Data, saved custom colors and production state are separate. */
 :root {
   --background: #fff;
-  --calendar-nav-space: 40px;
-  --card-gap: 10px;
+  --calendar-nav-space: 0px;
+  --card-gap: 20px;
   --edit-font-size: 11px;
 }
 
@@ -114,22 +114,25 @@
 }
 
 /* Draw only actual print boundaries: midnight is an open end, not a finished run. */
-.print-card.continues-after {
-  border: 0;
-  box-shadow: inset 1px 0 var(--project-color, var(--line)),
-    inset -1px 0 var(--project-color, var(--line)),
-    inset 0 1px var(--project-color, var(--line));
-}
-.print-card.is-continuation {
-  border: 0;
-  box-shadow: inset 1px 0 var(--project-color, var(--line)),
-    inset -1px 0 var(--project-color, var(--line)),
-    inset 0 -1px var(--project-color, var(--line));
-}
+/* A two-pixel stroke straddles the exact boundary by one pixel per side.
+   Adjacent cards therefore paint the same edge instead of two inset edges. */
+.print-card, .print-card.continues-after, .print-card.is-continuation,
 .print-card.is-continuation.continues-after {
-  box-shadow: inset 1px 0 var(--project-color, var(--line)),
-    inset -1px 0 var(--project-color, var(--line));
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
 }
+.print-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 2px solid currentColor;
+  pointer-events: none;
+  z-index: 2;
+}
+.print-card.is-continuation::after { border-top: 0; top: 0; }
+.print-card.continues-after::after { border-bottom: 0; bottom: 0; }
+.print-card .card-body { overflow: hidden; }
 .print-card.is-continuation .card-topline { justify-content: flex-start; text-align: left; }
 .print-card.is-continuation .card-status-pills { margin-left: 0; margin-right: auto; }
 .print-card.is-continuation .card-status-pills > span {
@@ -170,12 +173,12 @@
 .short-print-edit { order: 4; margin-top: 8px; }
 .print-card.is-short.is-expanded .show-more-button { bottom: 6px; right: 6px; }
 
-/* Desktop calendar and timeline share one width; arrows have their own side rails. */
+/* Desktop calendar and timeline share one width; navigation sits below the printer grids. */
 @media (min-width: 721px) {
   .calendar-shell {
     container-type: inline-size;
     --time-gutter: 0px;
-    --calendar-width: calc(100cqw - (var(--calendar-nav-space) * 2) - 2px);
+    --calendar-width: calc(100cqw - (var(--calendar-nav-space) * 2) - 4px);
     --calendar-day-width: calc(var(--calendar-width) / 7);
   }
   .calendar-week-header, .printer-calendar {
@@ -234,3 +237,53 @@
   .month-view { padding-top: 44px; }
 }
 button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* Structural strokes are twice as heavy as edit/continue actions. */
+.card-topline span, .card-topline strong {
+  background: transparent;
+  color: inherit;
+  border: 2px solid currentColor;
+}
+.progress-track { background: transparent; border: 2px solid currentColor; }
+.progress-track span { background: currentColor; }
+.calendar-frame, .timeline-board, .timeline-item, .month-event-chip,
+.mobile-event-item, .mobile-print-card, .new-print-preview,
+.project-column, .project-row, .product-row, .material-card, .shipping-box-row,
+.stock-row, .project-overview, .inventory-summary, .product-inventory,
+.data-drawer, .add-print-panel, .month-grid, .month-day, .month-print-chip,
+.time-day, .hour-line, .project-column-heading, .project-column-heading span,
+.project-overview > .eyebrow, .product-inventory .section-heading,
+.box-add-pill, .product-add-button, .secondary-action, .primary-action,
+.view-toggle button {
+  border-width: 2px;
+}
+.inventory-popup, .box-popup {
+  background: #e52b25;
+  border: 2px solid #a71828;
+  color: #fff;
+}
+.week-navigation { display: none; }
+@media (min-width: 721px) {
+  .week-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin: 12px 0 20px;
+  }
+  .week-navigation .week-arrow {
+    position: static;
+    transform: none;
+    border: 0;
+  }
+  .week-navigation .is-right { margin-left: auto; }
+}
+
+/* Past/deadline variants use the same transparent edit treatment. */
+.timeline-item.is-past .timeline-edit-button,
+.timeline-item.type-deadline .timeline-edit-button,
+.mobile-event-item.is-past .timeline-edit-button,
+.mobile-event-item.type-deadline .timeline-edit-button {
+  background: transparent;
+  color: inherit;
+}

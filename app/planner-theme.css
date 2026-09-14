@@ -346,3 +346,40 @@ button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   .box-popup { top: anchor(top, 122px); }
   .inventory-popup ~ .box-popup { position-anchor: --pellet-warning; top: calc(anchor(bottom, 200px) + 12px); }
 }
+
+.inventory-popup { background: #780b32; border-color: #780b32; }
+.project-column .project-row { border-width: 2px; }
+.project-column-heading span {
+  background: #000 !important;
+  color: #fff !important;
+  border: 0;
+  flex: 0 0 24px;
+}
+/* Use the product ink, rather than the black baked into the arrow SVG. */
+.continuation-review-toggle { background-image: none; color: inherit; }
+.continuation-review-toggle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  mask: url("/icons/pfeil-unten.svg") center / 15px auto no-repeat;
+}
+.print-card.is-continuation-only.is-too-tight:not(.is-expanded) .continuation-review-toggle::before {
+  mask-position: right 4px center;
+  mask-size: auto min(18px, calc(var(--duration-hours) * var(--hour-height) - 2px));
+}
+.print-card.is-continuation-only.is-too-tight.has-previous-day-control .continuation-review-toggle {
+  top: calc(var(--calendar-height) - 28px);
+  bottom: auto;
+  left: calc(-1 * var(--calendar-day-width) + 4px);
+  right: auto;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  z-index: 4;
+}
+.print-card.is-continuation-only.is-too-tight.has-previous-day-control .continuation-review-toggle::before {
+  mask-position: center;
+  mask-size: 15px auto;
+}

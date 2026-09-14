@@ -5047,6 +5047,12 @@ export function WeekPlanner() {
                           showContinuationOnly &&
                           !segment.continuesAfterSegment &&
                           lowerCardActions.length > 0;
+                        const usePreviousDayControl = canExpandContinuation &&
+                          segment.durationHours < 2 && layout.segments.some((previous) =>
+                            previous.run.id === segment.run.id &&
+                            previous.dayIndex === segment.dayIndex - 1 &&
+                            previous.continuesAfterSegment
+                          );
                         const isContinuationExpanded =
                           canExpandContinuation && expandedRunIds.has(continuationExpandId);
                         const isExpanded =
@@ -5078,7 +5084,7 @@ export function WeekPlanner() {
                           <article
                             className={`print-card status-${segment.run.status} ${
                               segment.run.priority === "urgent" ? "is-urgent" : ""
-                            } ${isContinuation ? "is-continuation" : ""} ${
+                            } ${isContinuation ? "is-continuation" : ""} ${usePreviousDayControl ? "has-previous-day-control" : ""} ${
                               showContinuationOnly ? "is-continuation-only" : ""
                             } ${
                               segment.continuesAfterSegment ? "continues-after" : ""

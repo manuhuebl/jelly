@@ -440,7 +440,32 @@ function addHours(date: Date, hours: number) {
 }
 
 function addDays(date: Date, days: number) {
-  return new Date(date.getTime() + days * DAY_MS);
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+// Calendar geometry follows local dates and clock time, not elapsed DST hours.
+function getCalendarDayOffset(start: Date, end: Date) {
+  const dayNumber = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  return (dayNumber(end) - dayNumber(start)) / DAY_MS;
+}
+
+function getCalendarHours(start: Date, end: Date) {
+  const clock = (date: Date) => date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+  return getCalendarDayOffset(start, end) * DAY_HOURS + clock(end) - clock(start);
+}
+
+function getSegmentDisplayHours(start: Date, end: Date) {
+  const clockHours = getCalendarHours(start, end);
+  // The repeated autumn hour has two instants on the same clock row.
+  return clockHours > 0 ? clockHours : getHoursBetween(start, end);
+}
+
+function setCalendarHour(date: Date, hour: number) {
+  const result = new Date(date);
+  result.setHours(Math.floor(hour), Math.round((hour % 1) * 60), 0, 0);
+  return result;
 }
 
 function addMonths(date: Date, months: number) {
@@ -704,7 +729,7 @@ function getWeekOffsetForDate(baseWeekStart: Date, date: Date) {
   const targetWeekStart = getStartOfWeek(date);
 
   return clamp(
-    Math.round(getHoursBetween(baseWeekStart, targetWeekStart) / (DAY_HOURS * WEEK_DAYS)),
+    Math.round(getCalendarDayOffset(baseWeekStart, targetWeekStart) / WEEK_DAYS),
     MIN_WEEK_OFFSET,
     MAX_WEEK_OFFSET
   );
@@ -817,14 +842,14 @@ function buildSegmentsForRun(entry: ScheduledRun, weekStart: Date) {
     return {
       ...entry,
       dayIndex,
-      durationHours: getHoursBetween(segmentStart, segmentEnd),
+      durationHours: getSegmentDisplayHours(segmentStart, segmentEnd),
       lane: 0,
       laneCount: 1,
       segmentEnd,
       segmentStart,
       startsBeforeSegment: entry.start < segmentStart,
       continuesAfterSegment: entry.end > segmentEnd,
-      topHours: getHoursBetween(dayStart, segmentStart)
+      topHours: getCalendarHours(dayStart, segmentStart)
     };
   }).filter((segment): segment is CalendarSegment => segment !== null);
 }
@@ -908,14 +933,14 @@ function getMobileDaySegments(
         return {
           ...entry,
           dayIndex,
-          durationHours: getHoursBetween(segmentStart, segmentEnd),
+          durationHours: getSegmentDisplayHours(segmentStart, segmentEnd),
           lane: 0,
           laneCount: 1,
           segmentEnd,
           segmentStart,
           startsBeforeSegment: entry.start < segmentStart,
           continuesAfterSegment: entry.end > segmentEnd,
-          topHours: getHoursBetween(dayStart, segmentStart)
+          topHours: getCalendarHours(dayStart, segmentStart)
         };
       })
   ).sort(
@@ -1478,7 +1503,7 @@ function roundUpToHalfHour(date: Date) {
 }
 
 function getDefaultNewPrintStart(weekStart: Date, now: Date) {
-  const weekDefault = addHours(addDays(weekStart, 2), 10);
+  const weekDefault = setCalendarHour(addDays(weekStart, 2), 10);
   let nextStart = weekDefault > now ? weekDefault : roundUpToHalfHour(now);
 
   if (isWeekend(nextStart)) {
@@ -1703,12 +1728,12 @@ function isDateInWeek(date: Date, weekStart: Date) {
 }
 
 function getCurrentTimeStyle(now: Date, weekStart: Date): CurrentTimeStyle {
-  const dayIndex = Math.floor(getHoursBetween(weekStart, now) / DAY_HOURS);
+  const dayIndex = getCalendarDayOffset(weekStart, now);
   const dayStart = addDays(weekStart, dayIndex);
 
   return {
     "--day-index": dayIndex,
-    "--start-hour": getHoursBetween(dayStart, now).toFixed(2)
+    "--start-hour": getCalendarHours(dayStart, now).toFixed(2)
   };
 }
 
@@ -1779,10 +1804,10 @@ function getTimelineStyle(entry: TimelineEntry, weekStart: Date, index: number):
   const visibleEnd = getEarlierDate(entry.end, weekEnd);
   const left =
     entry.type === "deadline"
-      ? ((visibleStart.getTime() - weekStart.getTime()) / (WEEK_DAYS * DAY_MS)) * 100 + 0.5
-      : ((visibleStart.getTime() - weekStart.getTime()) / (WEEK_DAYS * DAY_MS)) * 100;
+      ? (getCalendarHours(weekStart, visibleStart) / (WEEK_DAYS * DAY_HOURS)) * 100 + 0.5
+      : (getCalendarHours(weekStart, visibleStart) / (WEEK_DAYS * DAY_HOURS)) * 100;
   const width = Math.max(
-    ((visibleEnd.getTime() - visibleStart.getTime()) / (WEEK_DAYS * DAY_MS)) * 100,
+    (getCalendarHours(visibleStart, visibleEnd) / (WEEK_DAYS * DAY_HOURS)) * 100,
     entry.type === "deadline" ? 9 : 5
   );
 
@@ -1822,7 +1847,7 @@ function getDropStartFromBoard(
   const dayWidth = rect.width / WEEK_DAYS;
   const dayIndex = clamp(Math.floor((clientX - rect.left) / dayWidth), 0, WEEK_DAYS - 1);
   const startHour = snapToHalfHour(((clientY - rect.top) / rect.height) * DAY_HOURS);
-  const start = addHours(addDays(weekStart, dayIndex), startHour);
+  const start = setCalendarHour(addDays(weekStart, dayIndex), startHour);
 
   return {
     printerId,
